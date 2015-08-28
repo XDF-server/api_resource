@@ -1,0 +1,38 @@
+[group:tornadoes]
+programs=tornado-9000,tornado-9001,tornado-9002,tornado-9003,tornado-9004,tornado-9005,tornado-9006,tornado-9007
+
+[program:tornado-9000]
+command=python /home/zhangchunyang/idc_api/server/router.py --port=9000
+directory=/home/zhangchunyang/idc_api
+user=root
+autorestart=true
+redirect_stderr=true
+stdout_logfile=/home/zhangchunyang/idc_api/log/tornado.log
+loglevel=info
+
+[program:tornado-9001]
+command=python /home/zhangchunyang/idc_api/server/router.py --port=9001
+directory=/home/zhangchunyang/idc_api
+user=root
+autorestart=true
+redirect_stderr=true
+stdout_logfile=/home/zhangchunyang/idc_api/log/tornado.log
+loglevel=info
+
+[program:tornado-9002]
+command=python /home/zhangchunyang/idc_api/server/router.py --port=9002
+directory=/home/zhangchunyang/idc_api
+user=root
+autorestart=true
+redirect_stderr=true
+stdout_logfile=/home/zhangchunyang/idc_api/log/tornado.log
+loglevel=info
+
+[program:tornado-9003]
+command=python /home/zhangchunyang/idc_api/server/router.py --port=9003
+directory=/home/zhangchunyang/idc_api
+user=root
+autorestart=true
+redirect_stderr=true
+stdout_logfile=/home/zhangchunyang/idc_api/log/tornado.log
+loglevel=info
