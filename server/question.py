@@ -3,6 +3,7 @@
 import json
 import urllib
 import MySQLdb
+import traceback
 
 from hashlib import sha1
 from tornado import web,httpclient,gen
@@ -286,62 +287,76 @@ class get_exercises(web.RequestHandler):
             return self.write(error_process(1))
 
         topic_id = int(self.request.arguments['id'][0])
+        timestamp = self.request.arguments['timestamp'][0]
+        secret = self.request.arguments['secret'][0]
 
-        mysql = Mysql().get_handle(2)
-        cursor = mysql.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute('SELECT question_type, subject_id, difficulty FROM entity_question WHERE id = %d' % topic_id)
-        result = cursor.fetchall()
-        if not result and 1 != len(result):
-            LOG.error('abnormal topic_id[%d]!' % topic_id)
-            return self.write(error_process(2))
-        level_id = result[0]['difficulty']
-        topic_type = result[0]['question_type']
-        subject_id = result[0]['subject_id']
+        secret_key = '%d%s' % (topic_id, timestamp)
+        if secret != sha1(secret_key).hexdigest():
+            LOG.error('sign error! secret_key: %s' % secret_key)
+            return self.write(error_process(3))
 
-        # 获取题目类型
-        cursor.execute('SELECT type_id id, name FROM entity_question_type WHERE name = "%s"' % topic_type)
-        topic_type = cursor.fetchall()
-        if not topic_type and 1 != len(topic_type):
-            LOG.error('abnormal type of topic_id[%d]!' % topic_id)
-            return self.write(error_process(2))
-#        print 'topic_type: %s' % topic_type
+        try:
+            mysql = Mysql().get_handle()
+            cursor = mysql.cursor(MySQLdb.cursors.DictCursor)
+            cursor.execute('SELECT question_type, subject_id, difficulty FROM entity_question WHERE id = %d' % topic_id)
+            result = cursor.fetchall()
+            if not result and 1 != len(result):
+                LOG.error('abnormal topic_id[%d]!' % topic_id)
+                return self.write(error_process(2))
+            level_id = result[0]['difficulty']
+            topic_type = result[0]['question_type']
+            subject_id = result[0]['subject_id']
 
-        # 获取主题
-        cursor.execute('select id, substring_index(name, "\n", 1) name from entity_topic where id in (select topic_id from link_question_topic where question_id = %d)' % topic_id)
-        theme_list = list(cursor.fetchall())
-#        print 'theme: %s' % theme_list
+            # 获取题目类型
+            cursor.execute('SELECT type_id id, name FROM entity_question_type WHERE name = "%s"' % topic_type)
+            topic_type = cursor.fetchall()
+            if not topic_type and 1 != len(topic_type):
+                LOG.error('abnormal type of topic_id[%d]!' % topic_id)
+                return self.write(error_process(2))
+#            print 'topic_type: %s' % topic_type
 
-        # 获取专题
-        cursor.execute('select id, substring_index(name, "\n", 1) name from entity_seriess where id in (select series_id from link_question_series where question_id = %d)' % topic_id)
-        special_list = list(cursor.fetchall())
-#        print 'special: %s' % special_list
+            # 获取主题
+            cursor.execute('select id, substring_index(name, "\n", 1) name from entity_topic where id in (select topic_id from link_question_topic where question_id = %d)' % topic_id)
+            theme_list = list(cursor.fetchall())
+#            print 'theme: %s' % theme_list
 
-        mongo = Mongo().get_handle(0)
-        result = mongo.resource.mongo_question_json.find_one( { "question_id" : topic_id } )
-        if not result or 'body' not in result:
-            LOG.error('json body of question_id[%d] nonexistent!' % topic_id)
-            return self.write(error_process(2))
-        json_body = result['body']
+            # 获取专题
+            cursor.execute('select id, substring_index(name, "\n", 1) name from entity_seriess where id in (select series_id from link_question_series where question_id = %d)' % topic_id)
+            special_list = list(cursor.fetchall())
+#            print 'special: %s' % special_list
 
-        result = mongo.resource.mongo_question_html.find_one( { "question_id" : topic_id } )
-        if not result or 'body' not in result:
-            LOG.error('html body of question_id[%d] nonexistent!' % topic_id)
-            return self.write(error_process(2))
-        html_body = result['body']
+            mongo = Mongo().get_handle()
+            result = mongo.resource.mongo_question_json.find_one( { "question_id" : topic_id } )
+            if not result:# or 'body' not in result:
+                LOG.error('json body of question_id[%d] nonexistent!' % topic_id)
+                return self.write(error_process(2))
+            json_body = result['body']
 
-        result            = error_process(0)
-        result['json']    = json_body
-        result['html']    = html_body
-        result['topic']   = theme_list
-        result['seriess'] = special_list
-        result['level']   = level_id
-        result['type']    = topic_type[0]
+            result = mongo.resource.mongo_question_html.find_one( { "question_id" : topic_id } )
+            if not result:# or 'body' not in result:
+                LOG.error('html body of question_id[%d] nonexistent!' % topic_id)
+                return self.write(error_process(2))
+            html_body = result['body']
 
-        self.write(json.dumps(result, ensure_ascii=False))
+            result            = error_process(0)
+            result['json']    = json_body
+            result['html']    = html_body
+            result['topic']   = theme_list
+            result['seriess'] = special_list
+            result['level']   = level_id
+            result['type']    = topic_type[0]
 
-        mongo.close()
-        cursor.close()
-        mysql.close()
+            self.write(json.dumps(result, ensure_ascii=False))
+
+            mongo.close()
+            cursor.close()
+            mysql.close()
+        except MySQLdb.Error, e:
+            LOG.error(e)
+            return self.write(error_process(100))
+        except Exception, e:
+            LOG.error(e)
+            return self.write(error_process(100))
 
 class update_exercises(web.RequestHandler):
 
@@ -365,90 +380,102 @@ class update_exercises(web.RequestHandler):
 
         LOG.debug('question_id: %d, theme: %s, special: %s, level_id: %d, question_type: %s, timestamp: %s, secret: %s, question_json: %s, question_html: %s' % (question_id, theme, special, level_id, question_type, timestamp, secret, question_json, question_html))
 
-        if Business.is_level(level_id) is False:
-            LOG.error('invalid level_id[%d]' % level_id)
-            return self.write(error_process(1))
-
-        if not (level_id and question_type and question_json and question_html and question_id and secret and timestamp and theme + special):
-            LOG.error('invalid parameters: %s' % self.request.arguments)
-            return self.write(error_process(1))
+        secret_key = '%d%s%s%d%s%s' % (question_id, theme, special, level_id, question_type, timestamp)
+        if secret != sha1(secret_key).hexdigest():
+            LOG.error('sign error! secret_key: %s' % secret_key)
+            return self.write(error_process(3))
 
         try:
-            question_json = urllib.unquote(question_json)
-            encode_json   = json.loads(question_json, encoding = 'utf-8')
-            question_html = urllib.unquote(question_html)
-            encode_html   = json.loads(question_html, encoding = 'utf-8')
-        except:
-            traceback.print_exc()
-            LOG.error(sys.exc_info())
+            if Business.is_level(level_id) is False:
+                LOG.error('invalid level_id[%d]' % level_id)
+                return self.write(error_process(1))
+ 
+            if not (level_id and question_type and question_json and question_html and question_id and secret and timestamp and theme + special):
+                LOG.error('invalid parameters: %s' % self.request.arguments)
+                return self.write(error_process(1))
+ 
+            try:
+                question_json = urllib.unquote(question_json)
+                encode_json   = json.loads(question_json, encoding = 'utf-8')
+                question_html = urllib.unquote(question_html)
+                encode_html   = json.loads(question_html, encoding = 'utf-8')
+            except:
+                traceback.print_exc()
+                LOG.error(sys.exc_info())
+                return self.write(error_process(100))
+ 
+            LOG.debug('question_json: %s, question_html: %s' % (question_json, question_html))
+ 
+            sql_list = []
+ 
+            if theme: # 主题
+                sql_list.append('DELETE FROM link_question_topic WHERE question_id=%d' % question_id) # 生成删除原有主题关联的SQL
+                for theme_id in theme.split(','): # 将传入的主题号按逗号切割
+                    if Business.is_topic(theme_id) is False: # 判断主题号是否存在
+                        LOG.error('invalid theme_id[%s]' % theme_id)
+                        return self.write(error_process(1))
+                    sql_list.append('INSERT INTO link_question_topic (question_id, topic_id) VALUES (%s, %s)' % (question_id, theme_id)) # 生成将新主题关联插库的SQL
+ 
+            if special: # 专题
+                sql_list.append('DELETE FROM link_question_series WHERE question_id=%d' % question_id) # 生成删除原有专题关联的SQL
+                for special_id in special.split(','): # 将传入的专题号按逗号切割
+                    if Business.is_seriess(special_id) is False: # 判断专题号是否存在
+                        LOG.error('invalid special_id[%s]' % special_id)
+                        return self.write(error_process(1))
+                    sql_list.append('INSERT INTO link_question_series (question_id, series_id) VALUES (%s, %s)' % (question_id, special_id)) # 生成将新专题关联插库的SQL
+ 
+#            if Business.is_type(question_type) is False: # 判断题目类型是否存在
+#                LOG.error('invalid question_type[%s]' % question_type)
+#                return self.write(error_process(1))
+            sql_list.append('UPDATE entity_question SET difficulty=%d, upload_time=now(), question_type="%s" WHERE id=%d' % (level_id, question_type, question_id)) # 生成更新题目属性的SQL
+ 
+            mysql_handle = Mysql().get_handle()
+            mysql_cursor = mysql_handle.cursor(MySQLdb.cursors.DictCursor)
+            mysql_cursor.execute('SELECT question_docx, html FROM entity_question WHERE id=%d' % question_id) # 通过题目ID查询存储的json/html文件名
+            result = mysql_cursor.fetchall()
+            if not result:
+                LOG.error('invalid question_id[%d]' % question_id)
+                return self.write(error_process(1))
+ 
+            qiniu = QiniuWrap()
+            mongo = Mongo()
+            mongo.connect('resource')
+ 
+            if '.json' in result[0]['question_docx']:
+                json_name = result[0]['question_docx']
+                # 将七牛上的json文件删除后重新上传
+                qiniu.bucket.delete("temp", json_name)
+                qiniu.upload_data("temp", json_name, question_json)
+                # 将MongoDB中的json文件删除后重新上传
+                mongo.select_collection('mongo_question_json')
+                mongo.remove( { "question_id" : question_id } )
+                encode_json['question_id'] = question_id
+                mongo.insert_one(encode_json)
+ 
+            if '.html' in result[0]['html']:
+                html_name = result[0]['html']
+                # 将七牛上的html文件删除后重新上传
+                qiniu.bucket.delete("temp", html_name)
+                qiniu.upload_data("temp", html_name, question_html)
+                # 将MongoDB中的html文件删除后重新上传
+                mongo.select_collection('mongo_question_html')
+                mongo.remove( { "question_id" : question_id } )
+                encode_html['question_id'] = question_id
+                mongo.insert_one(encode_html)
+ 
+            print 'json_name: %s, html_name: %s' % (json_name, html_name)
+ 
+            for sql in sql_list:
+                mysql_cursor.execute(sql)
+            mysql_handle.commit()
+            mysql_cursor.close()
+            mysql_handle.close()
+ 
+            self.write(error_process(0))
+        except MySQLdb.Error, e:
+            LOG.error(e)
             return self.write(error_process(100))
-
-        LOG.debug('question_json: %s, question_html: %s' % (question_json, question_html))
- 
-        sql_list = []
-
-        if theme: # 主题
-            sql_list.append('DELETE FROM link_question_topic WHERE question_id=%d' % question_id) # 生成删除原有主题关联的SQL
-            for theme_id in theme.split(','): # 将传入的主题号按逗号切割
-                if Business.is_topic(theme_id) is False: # 判断主题号是否存在
-                    LOG.error('invalid theme_id[%s]' % theme_id)
-                    return self.write(error_process(1))
-                sql_list.append('INSERT INTO link_question_topic (question_id, topic_id) VALUES (%s, %s)' % (question_id, theme_id)) # 生成将新主题关联插库的SQL
- 
-        if special: # 专题
-            sql_list.append('DELETE FROM link_question_series WHERE question_id=%d' % question_id) # 生成删除原有专题关联的SQL
-            for special_id in special.split(','): # 将传入的专题号按逗号切割
-                if Business.is_seriess(special_id) is False: # 判断专题号是否存在
-                    LOG.error('invalid special_id[%s]' % special_id)
-                    return self.write(error_process(1))
-                sql_list.append('INSERT INTO link_question_series (question_id, series_id) VALUES (%s, %s)' % (question_id, special_id)) # 生成将新专题关联插库的SQL
-
-#        if Business.is_type(question_type) is False: # 判断题目类型是否存在
-#            LOG.error('invalid question_type[%s]' % question_type)
-#            return self.write(error_process(1))
-        sql_list.append('UPDATE entity_question SET difficulty=%d, upload_time=now(), question_type="%s" WHERE id=%d' % (level_id, question_type, question_id)) # 生成更新题目属性的SQL
-
-        mysql_handle = Mysql().get_handle(2)
-        mysql_cursor = mysql_handle.cursor(MySQLdb.cursors.DictCursor)
-        mysql_cursor.execute('SELECT question_docx, html FROM entity_question WHERE id=%d' % question_id) # 通过题目ID查询存储的json/html文件名
-        result = mysql_cursor.fetchall()
-        if not result:
-            LOG.error('invalid question_id[%d]' % question_id)
-            return self.write(error_process(1))
-
-        qiniu = QiniuWrap()
-        mongo = Mongo()
-        mongo.connect('resource')
-
-        if '.json' in result[0]['question_docx']:
-            json_name = result[0]['question_docx']
-            # 将七牛上的json文件删除后重新上传
-            qiniu.bucket.delete("temp", json_name)
-            qiniu.upload_data("temp", json_name, question_json)
-            # 将MongoDB中的json文件删除后重新上传
-            mongo.select_collection('mongo_question_json')
-            mongo.remove( { "question_id" : question_id } )
-            encode_json['question_id'] = question_id
-            mongo.insert_one(encode_json)
-
-        if '.html' in result[0]['html']:
-            html_name = result[0]['html']
-            # 将七牛上的html文件删除后重新上传
-            qiniu.bucket.delete("temp", html_name)
-            qiniu.upload_data("temp", html_name, question_html)
-            # 将MongoDB中的html文件删除后重新上传
-            mongo.select_collection('mongo_question_html')
-            mongo.remove( { "question_id" : question_id } )
-            encode_html['question_id'] = question_id
-            mongo.insert_one(encode_html)
-
-        print 'json_name: %s, html_name: %s' % (json_name, html_name)
-
-        for sql in sql_list:
-            mysql_cursor.execute(sql)
-        mysql_handle.commit()
-        mysql_cursor.close()
-        mysql_handle.close()
-
-        self.write(error_process(0))
+        except Exception, e:
+            LOG.error(e)
+            return self.write(error_process(100))
 

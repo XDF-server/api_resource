@@ -52,8 +52,8 @@ class Mongo(object):
 			
 		return self.collection
 
-        def get_handle(self, index):
-                return MongoClient(eval(Configer().get_configer('MONGO', 'configs'))[index])
+        def get_handle(self):
+                return MongoClient(host = configer.get_configer('MONGO', 'host'), port = int(configer.get_configer('MONGO', 'port')))
 
         def remove(self, data):
             return self.collection.remove(data)

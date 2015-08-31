@@ -160,6 +160,5 @@ class Mysql(object):
 		self.cur.close()
 		self.conn.close()
 
-        def get_handle(self, index):
-                config = eval(Configer().get_configer('MYSQL', 'configs'))[index]
-                return MySQLdb.connect(host = config['host'], user = config['user'], passwd = config['passwd'], db = config['db'], port = config['port'], charset = config['charset'])
+        def get_handle(self):
+                return MySQLdb.connect(host = Configer().get_configer('MYSQL', 'host'), user = Configer().get_configer('MYSQL', 'user'), passwd = Configer().get_configer('MYSQL', 'passwd'), db = Configer().get_configer('MYSQL', 'db'), port = int(Configer().get_configer('MYSQL', 'port')), charset = Configer().get_configer('MYSQL', 'charset'))
