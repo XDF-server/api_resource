@@ -17,7 +17,7 @@ class Business(object):
 
 		mysql.connect_master()
 		
-		query_sql = "select A.id,A.name,B.num from (select id,name from entity_group where system_id=%(system_id)d or id=0)A left outer join (select question_group,count(1) as num from entity_question where upload_id=%(system_id)d group by question_group)B on (A.id=B.question_group);" 
+		query_sql = "select A.id,A.name,B.num from (select id,name from entity_group where system_id=%(system_id)d or id=0 and enable=1)A left outer join (select question_group,count(1) as num from entity_question where upload_id=%(system_id)d group by question_group)B on (A.id=B.question_group);" 
 		
 		try:
 			if mysql.query(query_sql,system_id = system_id):
