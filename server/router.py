@@ -25,8 +25,6 @@ if __name__ == "__main__":
 	
 	tornado.options.parse_command_line()
 
-	settings = {"cookie_secret": "bZJc2sWbQLKos6GkHn/VB9oXwQt8S0R0kRvJ5/xJ89E="}
-
 	application = tornado.web.Application([
 		(r'/upload_question',UploadQuestion),
         	(r'/get_exercises', get_exercises),
@@ -39,11 +37,7 @@ if __name__ == "__main__":
 
 		(r'/transcode',Transcode),
 		(r'/transcode_res',TranscodeRes),
-	],
-	template_path = os.path.join(os.path.dirname(__file__),os.pardir,'templates'),
-	static_path = os.path.join(os.path.dirname(__file__),os.pardir,'static'),
-	**settings
-	)
+	])
 
 	http_server = tornado.httpserver.HTTPServer(application)
 
