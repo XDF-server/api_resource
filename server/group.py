@@ -75,36 +75,44 @@ class CreateGroup(web.RequestHandler):
 				client = httpclient.AsyncHTTPClient()
 				response = yield gen.Task(client.fetch,remote_url,method = 'POST',body = urllib.urlencode(post_data))
 				#response = Http.post(remote_url,post_data)
-				encode_body = json.loads(response.body)
 
-				if 0 == encode_body['code'] or 2 == encode_body['code']:
-					ret['code'] = 7
-					ret['message'] = 'invalid token'
-					LOG.error('ERROR[token not exist]')
-					break
+				if 200 == response.code:
+					encode_body = json.loads(response.body)
 
-				if 1 == encode_body['code']:
-					subject_id = encode_body['subject_id']
-					grade_id = encode_body['grade_id']
-					system_id = encode_body['system_id']
-					org_type = encode_body['org_type']				
+					if 0 == encode_body['code'] or 2 == encode_body['code']:
+						ret['code'] = 7
+						ret['message'] = 'invalid token'
+						LOG.error('ERROR[token not exist]')
+						break
 
-					db = Mysql()
-			
-					group_sql = "insert into entity_group (name,system_id) values ('%(group_name)s',%(system_id)d);"
+					if 1 == encode_body['code']:
+						subject_id = encode_body['subject_id']
+						grade_id = encode_body['grade_id']
+						system_id = encode_body['system_id']
+						org_type = encode_body['org_type']				
 
-					try:
-						db.connect_master()
-						group_res = db.query(group_sql,group_name = group_name,system_id = system_id)
+						db = Mysql()
+				
+						group_sql = "insert into entity_group (name,system_id) values ('%(group_name)s',%(system_id)d);"
 
-						group_sql = db.get_last_sql()
-						group_id = db.get_last_id()
-						LOG.info('SQL[%s] - RES[%s] - INS[%d]' % (group_sql,group_res,group_id))
-					
-					except DBException as e:
-						ret['code'] = 3
+						try:
+							db.connect_master()
+							group_res = db.query(group_sql,group_name = group_name,system_id = system_id)
+
+							group_sql = db.get_last_sql()
+							group_id = db.get_last_id()
+							LOG.info('SQL[%s] - RES[%s] - INS[%d]' % (group_sql,group_res,group_id))
+						
+						except DBException as e:
+							ret['code'] = 3
+							ret['message'] = 'server error'
+							LOG.error('ERROR[mysql error]')
+							break
+
+					else:
+						ret['code'] = 3 
 						ret['message'] = 'server error'
-						LOG.error('ERROR[mysql error]')
+						LOG.error('ERROR[remote error]')
 						break
 
 				else:
@@ -182,39 +190,45 @@ class GetGroupList(web.RequestHandler):
 				client = httpclient.AsyncHTTPClient()
 				response = yield gen.Task(client.fetch,remote_url,method = 'POST',body = urllib.urlencode(post_data))
 				#response = Http.post(remote_url,post_data)
+				if 200 == response.code:
+					encode_body = json.loads(response.body)
 
-				encode_body = json.loads(response.body)
-
-				if 0 == encode_body['code'] or 2 == encode_body['code']:
-					ret['code'] = 7
-					ret['message'] = 'invalid token'
-					LOG.error('ERR[token not exist]') 
-					break
-
-				if 1 == encode_body['code']:
-					subject_id = encode_body['subject_id']
-					grade_id = encode_body['grade_id']
-					system_id = encode_body['system_id']
-					org_type = encode_body['org_type']				
-					
-					try:
-						group_list = Business.get_group_list(system_id)
-						
-						if group_list is not False:
-							ret['group_list'] = group_list				
-
-					except DBException as e:
-						ret['code'] = 3
-						ret['message'] = 'server error'
-						LOG.error('ERR[mysql error]') 
+					if 0 == encode_body['code'] or 2 == encode_body['code']:
+						ret['code'] = 7
+						ret['message'] = 'invalid token'
+						LOG.error('ERR[token not exist]') 
 						break
 
-				else:
-					ret['code'] = 3 
-					ret['message'] = 'server error'
-					LOG.error('ERROR[remote error]')
-					break
+					if 1 == encode_body['code']:
+						subject_id = encode_body['subject_id']
+						grade_id = encode_body['grade_id']
+						system_id = encode_body['system_id']
+						org_type = encode_body['org_type']				
+						
+						try:
+							group_list = Business.get_group_list(system_id)
+							
+							if group_list is not False:
+								ret['group_list'] = group_list				
+
+						except DBException as e:
+							ret['code'] = 3
+							ret['message'] = 'server error'
+							LOG.error('ERR[mysql error]') 
+							break
+
+					else:
+						ret['code'] = 3 
+						ret['message'] = 'server error'
+						LOG.error('ERROR[remote error]')
+						break
 				
+				else:
+						ret['code'] = 3 
+						ret['message'] = 'server error'
+						LOG.error('ERROR[remote error]')
+						break
+
 				ret['code'] = 0
 				ret['message'] = 'success'
 				break
