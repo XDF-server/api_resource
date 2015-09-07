@@ -17,7 +17,7 @@ from mongo import Mongo
 from qiniu_wrap import QiniuWrap
 
 def error_process(index):
-    msg = [ { "error_code" : 0, "error_msg" : "success" }, { "error_code" : 1, "error_msg" : "invalid parameters" }, { "error_code" : 2, "error_msg" : "resources nonexistent" } ] 
+    msg = [ { "error_code" : 0, "error_msg" : "success" }, { "error_code" : 1, "error_msg" : "invalid parameters" }, { "error_code" : 2, "error_msg" : "resources nonexistent" }, { "error_code" : 3, "error_msg" : "sign error" } ] 
     if index >= len(msg):
         return { "error_code" : 100, "error_msg" : "unknown error" }
     return msg[index]
@@ -326,17 +326,15 @@ class get_exercises(web.RequestHandler):
 #            print 'special: %s' % special_list
 
             mongo = Mongo().get_handle()
-            result = mongo.resource.mongo_question_json.find_one( { "question_id" : topic_id } )
-            if not result:# or 'body' not in result:
+            json_body = mongo.resource.mongo_question_json.find_one( { 'question_id' : topic_id }, { '_id' : 0 } )
+            if not json_body: # or 'body' not in result:
                 LOG.error('json body of question_id[%d] nonexistent!' % topic_id)
                 return self.write(error_process(2))
-            json_body = result['body']
 
-            result = mongo.resource.mongo_question_html.find_one( { "question_id" : topic_id } )
-            if not result:# or 'body' not in result:
+            html_body = mongo.resource.mongo_question_html.find_one( { 'question_id' : topic_id }, { '_id' : 0 } )
+            if not html_body: # or 'body' not in result:
                 LOG.error('html body of question_id[%d] nonexistent!' % topic_id)
                 return self.write(error_process(2))
-            html_body = result['body']
 
             result            = error_process(0)
             result['json']    = json_body
