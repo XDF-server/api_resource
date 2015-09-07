@@ -7,8 +7,8 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.options
 import tornado.web
-from tornado.options import define,options
 
+from tornado.options import define,options
 from loader import Loader
 
 define('port',default = 9000,help='this is default port',type = int)
@@ -18,7 +18,7 @@ if __name__ == "__main__":
 	Loader.load()
 
 	from gl import LOG
-	from question import UploadQuestion, get_exercises, update_exercises
+	from question import UploadQuestion, get_exercises, update_exercises, search_keyword
 	from transcode import Transcode,TranscodeRes
 	from group import CreateGroup,GetGroupList
 	from approve import UpToken
@@ -29,6 +29,7 @@ if __name__ == "__main__":
 		(r'/upload_question',UploadQuestion),
         	(r'/get_exercises', get_exercises),
         	(r'/update_exercises', update_exercises),
+        	(r'/search_keyword', search_keyword),
 
 		(r'/create_group',CreateGroup),
 		(r'/get_group_list',GetGroupList),
