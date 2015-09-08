@@ -395,7 +395,7 @@ class update_exercises(web.RequestHandler):
         secret_key = '%d%s%s%d%d%s' % (question_id, theme, special, level_id, type_id, timestamp)
         if secret != sha1(secret_key).hexdigest():
             LOG.error('sign error! secret_key: %s' % secret_key)
-#            return self.write(error_process(3))
+            return self.write(error_process(3))
 
         try:
             if Business.is_level(level_id) is False:
@@ -483,9 +483,9 @@ class update_exercises(web.RequestHandler):
             mysql_handle.close()
  
             self.write(error_process(0))
-        except MySQLdb.Error, e:
-            LOG.error(e)
-            return self.write(error_process(100))
+#        except MySQLdb.Error, e:
+#            LOG.error(e)
+#            return self.write(error_process(100))
         except Exception, e:
             LOG.error(e)
             return self.write(error_process(100))
