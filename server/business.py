@@ -25,24 +25,23 @@ class Business(object):
 			group_dict = {}
 			group_list = []
 
-			if mysql.query(group_sql,system_id = system_id):
-				group_res = mysql.fetchall()
+			mysql.query(group_sql,system_id = system_id)
+			group_res = mysql.fetchall()
 
-			if mysql.query(query_sql,system_id = system_id):
-				num_res = mysql.fetchall()
-			else:
-				return False
+			mysql.query(query_sql,system_id = system_id)
+			num_res = mysql.fetchall()
 
 			for group in group_res:
 				group_id = group[0]
 				group_name = group[1]
 				group_dict[group_id] = {'id':int(group_id),'name':group_name,'num':0}
-			
+
 			for num in num_res:
 				gid = num[0]
 				num = num[1]
-
 				group_dict[gid]['num'] = num					
+
+			for gid in group_dict:
 				group_list.append(group_dict[gid])
 
 			return group_list
