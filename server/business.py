@@ -22,7 +22,7 @@ class Business(object):
 		group_sql = "select id,name from entity_group where (system_id=%(system_id)d or id=0);"
 		
 		try:
-			group_dict = []
+			group_dict = {}
 			group_list = []
 
 			if mysql.query(group_sql,system_id = system_id):
@@ -37,10 +37,11 @@ class Business(object):
 				group_id = group[0]
 				group_name = group[1]
 				group_dict[group_id] = {'id':int(group_id),'name':group_name,'num':0}
-
+			
 			for num in num_res:
-				gid = num_res[0]
-				num = num_res[1]
+				gid = num[0]
+				num = num[1]
+
 				group_dict[gid]['num'] = num					
 				group_list.append(group_dict[gid])
 
