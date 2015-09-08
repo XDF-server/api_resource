@@ -17,26 +17,35 @@ class Business(object):
 
 		mysql.connect_master()
 		
-		query_sql = "select A.id,A.name,count(1) from entity_group A,entity_question B where (A.system_id=%(system_id)d or A.id=0) and A.enable=1 and B.upload_id=%(system_id)d and A.id=B.question_group group by B.question_group;" 
+		query_sql = "select A.id,count(1) from entity_group A,entity_question B where (A.system_id=%(system_id)d or A.id=0) and A.enable=1 and B.upload_id=%(system_id)d and A.id=B.question_group group by B.question_group;" 
+		
+		group_sql = "select id,name from entity_group where (system_id=%(system_id)d or id=0);"
 		
 		try:
+			group_dict = []
+			group_list = []
+
+			if mysql.query(group_sql,system_id = system_id):
+				group_res = mysql.fetchall()
+
 			if mysql.query(query_sql,system_id = system_id):
-
-				res = mysql.fetchall()
-
-				group_list = []
-
-				for line in res:
-					group_id = line[0]
-					group_name = line[1]
-					question_num = int(line[2]) if line[2] else 0					
-					group_dict = {'id':int(group_id),'name':group_name,'num':int(question_num)}
-					group_list.append(group_dict)
-			
-				return group_list
+				num_res = mysql.fetchall()
 			else:
 				return False
 
+			for group in group_res:
+				group_id = group[0]
+				group_name = group[1]
+				group_dict[group_id] = {'id':int(group_id),'name':group_name,'num':0}
+
+			for num in num_res:
+				gid = num_res[0]
+				num = num_res[1]
+				group_dict[gid]['num'] = num					
+				group_list.append(group_dict[gid])
+
+			return group_list
+		
 		except DBException as e:
 			LOG.error('check topic error [%s]' % e)
 			raise CKException('check topic error')

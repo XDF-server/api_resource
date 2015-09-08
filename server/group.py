@@ -76,6 +76,8 @@ class CreateGroup(web.RequestHandler):
 				response = yield gen.Task(client.fetch,remote_url,method = 'POST',body = urllib.urlencode(post_data))
 				#response = Http.post(remote_url,post_data)
 
+				LOG.info('REMOTE RES CODE[%d]' % response.code)
+
 				if 200 == response.code:
 					encode_body = json.loads(response.body)
 
@@ -108,6 +110,7 @@ class CreateGroup(web.RequestHandler):
 							ret['message'] = 'server error'
 							LOG.error('ERROR[mysql error]')
 							break
+
 
 					else:
 						ret['code'] = 3 
@@ -190,6 +193,8 @@ class GetGroupList(web.RequestHandler):
 				client = httpclient.AsyncHTTPClient()
 				response = yield gen.Task(client.fetch,remote_url,method = 'POST',body = urllib.urlencode(post_data))
 				#response = Http.post(remote_url,post_data)
+				LOG.info('REMOTE RES CODE[%d]' % response.code)
+
 				if 200 == response.code:
 					encode_body = json.loads(response.body)
 
