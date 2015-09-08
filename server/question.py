@@ -1,26 +1,40 @@
 # *-* coding:utf-8 *-*
 
 import json
+import time
 import urllib
 import MySQLdb
+import hashlib
+import urllib2
 import traceback
 
-from hashlib import sha1
-from tornado import web,httpclient,gen
-from base import Base,Configer
-from business import Business
-from exception import DBException,CKException
-from http import Http
 from gl import LOG
+from http import Http
 from mysql import Mysql
 from mongo import Mongo
+from hashlib import sha1
+from business import Business
+from base import Base, Configer
 from qiniu_wrap import QiniuWrap
+from tornado import web, httpclient, gen
+from exception import DBException, CKException
+
+host = 'jiaoshi.okjiaoyu.cn'
 
 def error_process(index):
-    msg = [ { "error_code" : 0, "error_msg" : "success" }, { "error_code" : 1, "error_msg" : "invalid parameters" }, { "error_code" : 2, "error_msg" : "resources nonexistent" } ] 
+    msg = [ { "error_code" : 0, "error_msg" : "success" }, { "error_code" : 1, "error_msg" : "invalid parameters" }, { "error_code" : 2, "error_msg" : "resources nonexistent" }, { "error_code" : 3, "error_msg" : "sign error" } ] 
     if index >= len(msg):
         return { "error_code" : 100, "error_msg" : "unknown error" }
     return msg[index]
+
+
+def generate_token():
+    key = '&*312#'
+    ctime = int(time.time())
+    md5 = hashlib.md5()
+    md5.update('%s%s%d' % (host, key, ctime))
+    return '%s|%s' % (md5.hexdigest(), ctime)
+
 
 class UploadQuestion(web.RequestHandler):
 
@@ -326,17 +340,15 @@ class get_exercises(web.RequestHandler):
 #            print 'special: %s' % special_list
 
             mongo = Mongo().get_handle()
-            result = mongo.resource.mongo_question_json.find_one( { "question_id" : topic_id } )
-            if not result:# or 'body' not in result:
+            json_body = mongo.resource.mongo_question_json.find_one( { 'question_id' : topic_id }, { '_id' : 0 } )
+            if not json_body: # or 'body' not in result:
                 LOG.error('json body of question_id[%d] nonexistent!' % topic_id)
                 return self.write(error_process(2))
-            json_body = result['body']
 
-            result = mongo.resource.mongo_question_html.find_one( { "question_id" : topic_id } )
-            if not result:# or 'body' not in result:
+            html_body = mongo.resource.mongo_question_html.find_one( { 'question_id' : topic_id }, { '_id' : 0 } )
+            if not html_body: # or 'body' not in result:
                 LOG.error('html body of question_id[%d] nonexistent!' % topic_id)
                 return self.write(error_process(2))
-            html_body = result['body']
 
             result            = error_process(0)
             result['json']    = json_body
@@ -423,10 +435,10 @@ class update_exercises(web.RequestHandler):
                         LOG.error('invalid special_id[%s]' % special_id)
                         return self.write(error_process(1))
                     sql_list.append('INSERT INTO link_question_series (question_id, series_id) VALUES (%s, %s)' % (question_id, special_id)) # 生成将新专题关联插库的SQL
- 
-#            if Business.is_type(question_type) is False: # 判断题目类型是否存在
-#                LOG.error('invalid question_type[%s]' % question_type)
-#                return self.write(error_process(1))
+
+            if Business.is_type(question_type) is False: # 判断题目类型是否存在
+                LOG.error('invalid question_type[%s]' % question_type)
+                return self.write(error_process(1))
             sql_list.append('UPDATE entity_question SET difficulty=%d, upload_time=now(), question_type="%s" WHERE id=%d' % (level_id, question_type, question_id)) # 生成更新题目属性的SQL
  
             mysql_handle = Mysql().get_handle()
@@ -479,3 +491,27 @@ class update_exercises(web.RequestHandler):
             LOG.error(e)
             return self.write(error_process(100))
 
+
+class search_keyword(web.RequestHandler):
+
+    def post(self):
+
+        self.set_header("Access-Control-Allow-Origin", "*")
+
+        if set(self.request.arguments.keys()) != set(['word', 'page_num']):
+            LOG.error('invalid parameter keys: %s' % self.request.arguments.keys())
+            return self.write(error_process(1))
+
+        word = self.request.arguments['word'][0]
+        page_num = int(self.request.arguments['page_num'][0])
+
+        url = 'http://wenku.baidu.com/api/interface/search?word=%s&pn=%d&token=%s&host=%s' % (word, page_num, generate_token(), host)
+        docs = eval(urllib2.urlopen(url).read())['data']
+
+        result = error_process(0)
+        result['docsnum'] = docs['docsnum']
+        result['docinfo'] = docs['docinfo']
+
+        LOG.debug(result)
+
+        return self.write(result)

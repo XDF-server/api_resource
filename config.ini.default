@@ -19,8 +19,6 @@ passwd = 1a2s3dqwe
 db = test
 charset = utf8
 
-#configs = [ { "host" : "10.60.0.36", "user" : "admin", "passwd" : "qq9527@xdf", "db" : "neworiental_v2", "port" : 3306, "charset" : "utf8" }, { "host" : "10.60.0.159", "user" : "root", "passwd" : "1a2s3dqwe", "db" : "neworiental", "port" : 3306, "charset" : "utf8" }, { "host" : "10.60.0.151", "user" : "root", "passwd" : "1a2s3dqwe", "db" : "test", "port" : 3306, "charset" : "utf8" } ]
-
 [QINIU]
 access_key = 3U3R4V_FY_xWfoMYPANcyP5VZ2jhsj7p1ymYlMCT
 secret_key = 40ajDfBPH-l7KaDbk0xmyffxV1dX4aS6UKYZGnaY
@@ -29,12 +27,8 @@ secret_key = 40ajDfBPH-l7KaDbk0xmyffxV1dX4aS6UKYZGnaY
 host = 10.60.0.151
 port = 27017
 
-#configs = [ "mongodb://10.60.0.151:27017", "mongodb://10.60.0.159:27017" ]
-
 [REMOTE]
 host = 10.60.0.159
 port = 7001
 uri = data_subscription/getUserInfo
 timeout = 1
-                                                                                                              
-
