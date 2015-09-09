@@ -383,16 +383,16 @@ class update_exercises(web.RequestHandler):
         theme         = self.request.arguments['topic'][0]
         secret        = self.request.arguments['secret'][0]
         special       = self.request.arguments['seriess'][0]
+        type_id       = int(self.request.arguments['type'][0])
         level_id      = int(self.request.arguments['level'][0])
         timestamp     = self.request.arguments['timestamp'][0]
         question_id   = int(self.request.arguments['id'][0])
-        question_type = self.request.arguments['type'][0]
         question_json = self.request.arguments['json'][0]
         question_html = self.request.arguments['html'][0]
 
-        LOG.debug('question_id: %d, theme: %s, special: %s, level_id: %d, question_type: %s, timestamp: %s, secret: %s, question_json: %s, question_html: %s' % (question_id, theme, special, level_id, question_type, timestamp, secret, question_json, question_html))
+        LOG.debug('question_id: %d, theme: %s, special: %s, level_id: %d, type_id: %d, timestamp: %s, secret: %s, question_json: %s, question_html: %s' % (question_id, theme, special, level_id, type_id, timestamp, secret, question_json, question_html))
 
-        secret_key = '%d%s%s%d%s%s' % (question_id, theme, special, level_id, question_type, timestamp)
+        secret_key = '%d%s%s%d%d%s' % (question_id, theme, special, level_id, type_id, timestamp)
         if secret != sha1(secret_key).hexdigest():
             LOG.error('sign error! secret_key: %s' % secret_key)
             return self.write(error_process(3))
@@ -402,7 +402,7 @@ class update_exercises(web.RequestHandler):
                 LOG.error('invalid level_id[%d]' % level_id)
                 return self.write(error_process(1))
  
-            if not (level_id and question_type and question_json and question_html and question_id and secret and timestamp and theme + special):
+            if not (level_id and type_id and question_json and question_html and question_id and secret and timestamp and theme + special):
                 LOG.error('invalid parameters: %s' % self.request.arguments)
                 return self.write(error_process(1))
  
@@ -436,8 +436,9 @@ class update_exercises(web.RequestHandler):
                         return self.write(error_process(1))
                     sql_list.append('INSERT INTO link_question_series (question_id, series_id) VALUES (%s, %s)' % (question_id, special_id)) # 生成将新专题关联插库的SQL
 
-            if Business.is_type(question_type) is False: # 判断题目类型是否存在
-                LOG.error('invalid question_type[%s]' % question_type)
+            question_type = Business.is_type(type_id)
+            if question_type is False: # 判断题目类型是否存在
+                LOG.error('invalid type_id[%d]' % type_id)
                 return self.write(error_process(1))
             sql_list.append('UPDATE entity_question SET difficulty=%d, upload_time=now(), question_type="%s" WHERE id=%d' % (level_id, question_type, question_id)) # 生成更新题目属性的SQL
  
@@ -448,12 +449,12 @@ class update_exercises(web.RequestHandler):
             if not result:
                 LOG.error('invalid question_id[%d]' % question_id)
                 return self.write(error_process(1))
- 
+
             qiniu = QiniuWrap()
             mongo = Mongo()
             mongo.connect('resource')
- 
-            if '.json' in result[0]['question_docx']:
+
+            if result[0]['question_docx'] and '.json' in result[0]['question_docx']:
                 json_name = result[0]['question_docx']
                 # 将七牛上的json文件删除后重新上传
                 qiniu.bucket.delete("temp", json_name)
@@ -463,8 +464,8 @@ class update_exercises(web.RequestHandler):
                 mongo.remove( { "question_id" : question_id } )
                 encode_json['question_id'] = question_id
                 mongo.insert_one(encode_json)
- 
-            if '.html' in result[0]['html']:
+
+            if result[0]['html'] and '.html' in result[0]['html']:
                 html_name = result[0]['html']
                 # 将七牛上的html文件删除后重新上传
                 qiniu.bucket.delete("temp", html_name)
@@ -475,8 +476,6 @@ class update_exercises(web.RequestHandler):
                 encode_html['question_id'] = question_id
                 mongo.insert_one(encode_html)
  
-            print 'json_name: %s, html_name: %s' % (json_name, html_name)
- 
             for sql in sql_list:
                 mysql_cursor.execute(sql)
             mysql_handle.commit()
@@ -484,9 +483,9 @@ class update_exercises(web.RequestHandler):
             mysql_handle.close()
  
             self.write(error_process(0))
-        except MySQLdb.Error, e:
-            LOG.error(e)
-            return self.write(error_process(100))
+#        except MySQLdb.Error, e:
+#            LOG.error(e)
+#            return self.write(error_process(100))
         except Exception, e:
             LOG.error(e)
             return self.write(error_process(100))
