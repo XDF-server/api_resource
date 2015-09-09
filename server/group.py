@@ -242,8 +242,8 @@ class GetGroupList(web.RequestHandler):
 				ret['message'] = 'secure key error'
 				LOG.error('ERR[secure key error]') 
 				break
-
-		self.write(json.dumps(ret))
+		LOG.info(ret)
+		self.write(ret)
 		self.finish()
 		LOG.info('PARAMETER OUT[%s]' % ret)
 		LOG.info('API OUT[%s]' % (self.__class__.__name__))

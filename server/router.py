@@ -26,20 +26,15 @@ if __name__ == "__main__":
 	tornado.options.parse_command_line()
 
 	application = tornado.web.Application([
-		(r'/upload_question',UploadQuestion),
-        	(r'/get_exercises', get_exercises),
-        	(r'/update_exercises', update_exercises),
-        	(r'/search_keyword', search_keyword),
-
-		(r'/create_group',CreateGroup),
-		(r'/get_group_list',GetGroupList),
-		(r'/update_group',UpdateGroup),
-		(r'/delete_group',DeleteGroup),
-
-		(r'/uptoken',UpToken),
-
-		(r'/transcode',Transcode),
-		(r'/transcode_res',TranscodeRes),
+		(r'/api/upload_question',UploadQuestion),
+        	(r'/api/get_exercises', get_exercises),
+        	(r'/api/update_exercises', update_exercises),
+        	(r'/api/search_keyword', search_keyword),
+		(r'/api/create_group',CreateGroup),
+		(r'/api/get_group_list',GetGroupList),
+		(r'/api/uptoken',UpToken),
+		(r'/api/transcode',Transcode),
+		(r'/api/transcode_res',TranscodeRes),
 	])
 
 	http_server = tornado.httpserver.HTTPServer(application)
