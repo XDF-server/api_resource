@@ -142,7 +142,7 @@ class GetGroupList(web.RequestHandler):
 
 	@web.asynchronous
 	@gen.engine
-	def post(self):
+	def get(self):
 
 		for i in range(1):
 			
