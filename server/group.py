@@ -145,7 +145,8 @@ class GetGroupList(web.RequestHandler):
 	def get(self):
 
 		for i in range(1):
-			
+			self.set_header("charset","utf-8"); 
+
 			LOG.info('API IN[%s]' % (self.__class__.__name__))
                         LOG.info('PARAMETER IN[%s]' % self.request.arguments)
 
@@ -242,7 +243,7 @@ class GetGroupList(web.RequestHandler):
 				ret['message'] = 'secure key error'
 				LOG.error('ERR[secure key error]') 
 				break
-		LOG.info(ret)
+		LOG.info(ret['group_list'][0]['name'])
 		self.write(ret)
 		self.finish()
 		LOG.info('PARAMETER OUT[%s]' % ret)
