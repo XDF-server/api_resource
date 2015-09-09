@@ -52,16 +52,16 @@ class Business(object):
 
 
 	@staticmethod
-	def group_name_exist(group_name):
+	def group_name_exist(group_name,system_id):
 		
 		mysql = Mysql()
 
 		mysql.connect_master()
 		
-		query_sql = "select 1 from entity_group where name = '%(group_name)s';" 
+		query_sql = "select 1 from entity_group where name = '%(group_name)s' and system_id=%(system_id)d;" 
 		
 		try:
-			if mysql.query(query_sql,group_name = group_name):
+			if mysql.query(query_sql,group_name = group_name,system_id = int(system_id)):
 				return True
 			else:
 				return False

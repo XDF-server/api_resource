@@ -20,7 +20,7 @@ if __name__ == "__main__":
 	from gl import LOG
 	from question import UploadQuestion, get_exercises, update_exercises, search_keyword
 	from transcode import Transcode,TranscodeRes
-	from group import CreateGroup,GetGroupList
+	from group import CreateGroup,GetGroupList,UpdateGroup,DeleteGroup
 	from approve import UpToken
 	
 	tornado.options.parse_command_line()
@@ -33,6 +33,8 @@ if __name__ == "__main__":
 
 		(r'/create_group',CreateGroup),
 		(r'/get_group_list',GetGroupList),
+		(r'/update_group',UpdateGroup),
+		(r'/delete_group',DeleteGroup),
 
 		(r'/uptoken',UpToken),
 
