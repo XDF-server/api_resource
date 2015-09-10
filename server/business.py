@@ -24,6 +24,7 @@ class Business(object):
 		try:
 			group_dict = {}
 			group_list = []
+			default_num = 0
 
 			mysql.query(group_sql,system_id = system_id)
 			group_res = mysql.fetchall()
@@ -42,9 +43,13 @@ class Business(object):
 				group_dict[gid]['num'] = num					
 
 			for gid in group_dict:
+				if 0 == gid:
+					default_num = group_dict[gid]['num']
+					continue
+
 				group_list.append(group_dict[gid])
 
-			return group_list
+			return group_list,default_num
 		
 		except DBException as e:
 			LOG.error('check topic error [%s]' % e)
@@ -71,16 +76,16 @@ class Business(object):
 			raise CKException('check topic error')
 
 	@staticmethod
-	def group_id_exist(group_id):
+	def group_id_exist(group_id,system_id):
 		
 		mysql = Mysql()
 
 		mysql.connect_master()
 		
-		query_sql = "select 1 from entity_group where id = '%(group_id)d';" 
+		query_sql = "select 1 from entity_group where id='%(group_id)d' and system_id=%(system_id)d;" 
 		
 		try:
-			if mysql.query(query_sql,group_id = int(group_id)):
+			if mysql.query(query_sql,group_id = int(group_id),system_id = system_id):
 				return True
 			else:
 				return False
