@@ -214,7 +214,7 @@ class UploadQuestion(web.RequestHandler):
 						question_res = db.exec_event(question_sql,level = int(question_level),json = json_key,html = html_key,type = type_name,subject_id = int(subject_id),upload_id = int(system_id),upload_src = int(org_type),question_group = int(question_group),grade_id = int(grade_id))
 						question_sql = db.get_last_sql()
 						question_id = db.get_last_id()
-						LOG.info('SQL[%s] - RES[%s] - INS[%d]' % (question_sql,question_res,question_id))
+						LOG.info('RES[%s] - INS[%d]' % (question_sql,question_res,question_id))
 				
 						if Base.empty(question_topic) is False:
 							topic_list = question_topic.split(',')
@@ -222,7 +222,7 @@ class UploadQuestion(web.RequestHandler):
 								topic_res = db.exec_event(link_topic_sql,q_id = int(question_id),t_id = int(question_theme))
 								topic_sql = db.get_last_sql()
 								topic_id = db.get_last_id()
-								LOG.info('SQL[%s] - RES[%s] - INS[%d]' % (link_topic_sql,topic_res,topic_id))
+								LOG.info('RES[%s] - INS[%d]' % (link_topic_sql,topic_res,topic_id))
 						if Base.empty(question_seriess) is False:
 							seriess_list = question_seriess.split(',')
 
@@ -230,7 +230,7 @@ class UploadQuestion(web.RequestHandler):
 								series_res = db.exec_event(link_series_sql,q_id = int(question_id),s_id = int(question_special))
 								series_sql = db.get_last_sql()
 								series_id = db.get_last_id()
-								LOG.info('SQL[%s] - RES[%s] - INS[%d]' % (link_series_sql,series_res,series_id))
+								LOG.info('RES[%s] - INS[%d]' % (link_series_sql,series_res,series_id))
 
 					except DBException as e:
 						db.rollback()
@@ -245,20 +245,17 @@ class UploadQuestion(web.RequestHandler):
 				LOG.error('ERROR[remote error]')
 				break
 							
-			encode_json['question_id'] = question_id
-			encode_html['question_id'] = question_id
-
 			mongo = Mongo()
 
 			try:
 				mongo.connect('resource')
 				mongo.select_collection('mongo_question_json')
-				json_id = mongo.insert_one(encode_json)
-				LOG.info('MONGO[insert json] - DATA[%s] - INS[%s]' % (question_json,json_id))
+				json_id = mongo.insert_one({"content":encode_json,"question_id":question_id})
+				LOG.info('MONGO[insert json] - DATA[%s] - INS[%s]' % (json.dumps(encode_json),json_id))
 
 				mongo.select_collection('mongo_question_html')
-				html_id = mongo.insert_one(encode_html)
-				LOG.info('MONGO[insert html] - DATA[%s] - INS[%s]' % (question_html,html_id))
+				html_id = mongo.insert_one({"content":encode_html,"question_id":question_id})
+				LOG.info('MONGO[insert html] - DATA[%s] - INS[%s]' % (json.dumps(encode_html),html_id))
 
 			except DBException as e:
 				ret['code'] = 3 
@@ -365,34 +362,27 @@ class update_exercises(web.RequestHandler):
 
         self.set_header("Access-Control-Allow-Origin", "*")
 
-        if set(self.request.arguments.keys()) != set(['id', 'json', 'html', 'topic', 'seriess', 'level', 'type']):
+        if set(self.request.arguments.keys()) != set(['id', 'json', 'html', 'topic', 'seriess', 'level', 'type', 'group']):
             LOG.error('invalid parameter keys: %s' % self.request.arguments.keys())
             return self.write(error_process(1))
 
         theme         = self.request.arguments['topic'][0]
-#        secret        = self.request.arguments['secret'][0]
         special       = self.request.arguments['seriess'][0]
         type_id       = int(self.request.arguments['type'][0])
         level_id      = int(self.request.arguments['level'][0])
-        group_id      = self.request.arguments['group_id'][0]
-#        timestamp     = self.request.arguments['timestamp'][0]
+        group_id      = int(self.request.arguments['group'][0])
         question_id   = int(self.request.arguments['id'][0])
         question_json = self.request.arguments['json'][0]
         question_html = self.request.arguments['html'][0]
 
         LOG.debug('question_id: %d, theme: %s, special: %s, level_id: %d, group_id: %d, type_id: %d, question_json: %s, question_html: %s' % (question_id, theme, special, level_id, group_id, type_id, question_json, question_html))
 
-#        secret_key = '%d%s%s%d%d%d%s' % (question_id, theme, special, level_id, group_id, type_id, timestamp)
-#        if secret != sha1(secret_key).hexdigest():
-#            LOG.error('sign error! secret_key: %s' % secret_key)
-#            return self.write(error_process(3))
-
         try:
             if Business.is_level(level_id) is False:
                 LOG.error('invalid level_id[%d]' % level_id)
                 return self.write(error_process(1))
  
-            if not (level_id and type_id and question_json and question_html and question_id and secret and timestamp and theme + special):
+            if not (level_id and type_id and question_json and question_html and question_id and theme + special):
                 LOG.error('invalid parameters: %s' % self.request.arguments)
                 return self.write(error_process(1))
  
