@@ -209,7 +209,7 @@ class UploadQuestion(web.RequestHandler):
 
 					db = Mysql()
 
-					question_sql = "insert into entity_question (difficulty,question_docx,html,upload_time,question_type,subject_id,new_format,upload_id,upload_src,question_group,grade_id) values (%(level)d,'%(json)s','%(html)s',now(),'%(type)s',%(subject_id)d,1,%(upload_id)d,%(upload_src)d,%(question_group)d,%(grade_id)d);"
+					question_sql = "insert into entity_question (difficulty,question_docx,html,upload_time,question_type,subject_id,new_format,upload_id,upload_src,question_group,grade_id,state) values (%(level)d,'%(json)s','%(html)s',now(),'%(type)s',%(subject_id)d,1,%(upload_id)d,%(upload_src)d,%(question_group)d,%(grade_id)d,'ENABLED');"
 					
 					link_topic_sql = "insert into link_question_topic (question_id,topic_id) values (%(q_id)d,%(t_id)d);"
 
@@ -222,7 +222,7 @@ class UploadQuestion(web.RequestHandler):
 						question_res = db.exec_event(question_sql,level = int(question_level),json = json_key,html = html_key,type = type_name,subject_id = int(subject_id),upload_id = int(system_id),upload_src = int(org_type),question_group = int(question_group),grade_id = int(grade_id))
 						question_sql = db.get_last_sql()
 						question_id = db.get_last_id()
-						LOG.info('RES[%s] - INS[%d]' % (question_sql,question_res,question_id))
+						LOG.info('RES[%s] - INS[%d]' % (question_res,question_id))
 				
 						if Base.empty(question_topic) is False:
 							topic_list = question_topic.split(',')
@@ -230,7 +230,7 @@ class UploadQuestion(web.RequestHandler):
 								topic_res = db.exec_event(link_topic_sql,q_id = int(question_id),t_id = int(question_theme))
 								topic_sql = db.get_last_sql()
 								topic_id = db.get_last_id()
-								LOG.info('RES[%s] - INS[%d]' % (link_topic_sql,topic_res,topic_id))
+								LOG.info('RES[%s] - INS[%d]' % (topic_res,topic_id))
 						if Base.empty(question_seriess) is False:
 							seriess_list = question_seriess.split(',')
 
@@ -238,7 +238,7 @@ class UploadQuestion(web.RequestHandler):
 								series_res = db.exec_event(link_series_sql,q_id = int(question_id),s_id = int(question_special))
 								series_sql = db.get_last_sql()
 								series_id = db.get_last_id()
-								LOG.info('RES[%s] - INS[%d]' % (link_series_sql,series_res,series_id))
+								LOG.info('RES[%s] - INS[%d]' % (series_res,series_id))
 
 					except DBException as e:
 						db.rollback()
