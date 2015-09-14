@@ -54,49 +54,29 @@ class Mysql(object):
 			msg = 'connect failed'
 			LOG.error('Error:%s' % str(e))
 			raise DBException(msg)
-	
-	def connect_test(self):
-
-		if self.connect_flag:
-			self.cur.close()
-			self.conn.close()
-			self.connect_flag = False
-
-		try:
-			self.conn = MySQLdb.connect(
-					host = '10.60.0.151',
-					port = 3306,
-					user = 'root',
-					passwd = '1a2s3dqwe', 
-					db = 'test',
-					charset = 'utf8')
-			
-			self.cur = self.conn.cursor()
-
-		except MySQLdb.Error,e:
-			self.status = self.status_enum.CONN_ERR
-			msg = 'connect failed'
-			LOG.error('Error:%s' % str(e))
-			raise DBException(msg)
 
 	def start_event(self):
-
+		self.query('set autocommit=0;')
+		self.query('begin;')
 		self.event_flag = True
+		LOG.info(dir(self.conn))
 
 	def exec_event(self,sql,**kwds):
 
 		if self.event_flag:
-
 			res = self.query(sql,**kwds)
 			return res
+
 		else:
 			self.status = self.status_enum.EVENT_ERR
 			raise DBException('event failed')
 
 	def end_event(self):
-
-		self.commit()
-		self.event_flag = False
+		
+		if self.event_flag:
+			self.commit()
+			self.event_flag = False
+			self.query('set autocommit=1;')
 
 	def get_last_id(self):
 
@@ -137,7 +117,10 @@ class Mysql(object):
 			LOG.error('format failed')
 			raise DBException('format failed')
 	
-		if self.cur.rowcount:		
+		if self.cur.rowcount:
+			if self.event_flag is False:
+				self.commit()
+		
 			return True
 		
 		else:
