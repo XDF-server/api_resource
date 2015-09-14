@@ -243,7 +243,7 @@ class GetGroupList(web.RequestHandler):
 				ret['message'] = 'secure key error'
 				LOG.error('ERR[secure key error]') 
 				break
-		LOG.info(ret['group_list'][0]['name'])
+
 		self.write(ret)
 		self.finish()
 		LOG.info('PARAMETER OUT[%s]' % ret)
