@@ -1,4 +1,4 @@
-# *-* coidng:utf-8 *-* 
+# *-* coding:utf-8 *-* 
 import qiniu
 from qiniu import Auth,BucketManager
 from qiniu import PersistentFop,op_save,put_file,put_data
@@ -122,7 +122,22 @@ class QiniuWrap(object):
 	def get_uptoken(self,bucket_name,key):
 			
 		return self.q.upload_token(bucket_name,key)
-                
+ 		
+	def list_bucket(self,bucket_name):
+		marker = None
+		eof = False
+		
+		while eof is False:
+			ret, eof, info = self.bucket.list(bucket_name, prefix=prefix, marker=marker, limit=limit)
+			marker = ret.get('marker', None)
+
+			for item in ret['items']:
+				print(item['key'])
+				pass
+
+			if eof is not True:
+				# 错误处理
+				pass               
                         
 if __name__ == '__main__':
        	aa = QiniuWrap()

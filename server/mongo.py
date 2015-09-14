@@ -22,9 +22,10 @@ class Mongo(object):
 
 		mongo_host = configer.get_configer('MONGO','host')
 		mongo_port = int(configer.get_configer('MONGO','port'))
+		mongo_timeout = int(configer.get_configer('MONGO','timeout'))
 			
 		try:
-			self.client = MongoClient(host = mongo_host,port = mongo_port)
+			self.client = MongoClient(host = mongo_host,port = mongo_port,connectTimeoutMS = mongo_timeout)
 			self.db = self.client[db]
 	
 		except ConnectionFailure,e:
