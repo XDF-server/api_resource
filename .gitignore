@@ -1,0 +1,7 @@
+*.pyc
+*.bak
+*.log
+.*.swp
+nohup.out
+config.ini
+tornado.conf
