@@ -36,6 +36,7 @@ class Mysql(object):
 		passwd = configer.get_configer('MYSQL','passwd')
 		db = configer.get_configer('MYSQL','db')
 		charset = configer.get_configer('MYSQL','charset')
+		timeout = configer.get_configer('MYSQL','timeout')
 
 		try:
 			self.conn = MySQLdb.connect(
@@ -44,7 +45,8 @@ class Mysql(object):
 					user = user,
 					passwd = passwd,
 					db = db,
-					charset = charset)
+					charset = charset,
+					connect_timeout = int(timeout))
 			
 			self.cur = self.conn.cursor()
 			self.connect_flag = True

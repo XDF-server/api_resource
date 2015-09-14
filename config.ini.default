@@ -18,6 +18,7 @@ user = root
 passwd = 1a2s3dqwe
 db = test
 charset = utf8
+timeout = 2
 
 [QINIU]
 access_key = 3U3R4V_FY_xWfoMYPANcyP5VZ2jhsj7p1ymYlMCT
@@ -26,6 +27,7 @@ secret_key = 40ajDfBPH-l7KaDbk0xmyffxV1dX4aS6UKYZGnaY
 [MONGO]
 host = 10.60.0.151
 port = 27017
+timeout = 2 
 
 [REMOTE]
 host = 10.60.0.159
