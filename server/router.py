@@ -18,7 +18,7 @@ if __name__ == "__main__":
 	Loader.load()
 
 	from gl import LOG
-	from question import UploadQuestion, get_exercises, update_exercises, search_keyword
+	from question import *
 	from transcode import Transcode,TranscodeRes
 	from group import CreateGroup,GetGroupList,UpdateGroup,DeleteGroup
 	from approve import UpToken
@@ -30,12 +30,14 @@ if __name__ == "__main__":
         	(r'/api/get_exercises', get_exercises),
         	(r'/api/update_exercises', update_exercises),
         	(r'/api/search_keyword', search_keyword),
-
+        	(r'/api/get_class', get_class),
+        	(r'/api/get_token', get_token),
+        	(r'/api/get_subject', get_subject),
+        	(r'/api/doc_download', doc_download),
 		(r'/api/create_group',CreateGroup),
 		(r'/api/get_group_list',GetGroupList),
 		(r'/api/update_group',UpdateGroup),
 		(r'/api/delete_group',DeleteGroup),
-
 		(r'/api/uptoken',UpToken),
 		(r'/api/transcode',Transcode),
 		(r'/api/transcode_res',TranscodeRes),
