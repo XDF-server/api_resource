@@ -19,7 +19,10 @@ from qiniu_wrap import QiniuWrap
 from tornado import web, httpclient, gen
 from exception import DBException, CKException
 
-host = 'jiaoshi.okjiaoyu.cn'
+#host = 'jiaoshi.okjiaoyu.cn'
+host = 'wenku.baidu.com'
+public_key = '&*312#'
+secret_key = '6f614cb00c6b6821e3cdc85ab1f8f907'
 
 def error_process(index):
     msg = [ { "error_code" : 0, "error_msg" : "success" }, { "error_code" : 1, "error_msg" : "invalid parameters" }, { "error_code" : 2, "error_msg" : "resources nonexistent" }, { "error_code" : 3, "error_msg" : "sign error" } ] 
@@ -29,12 +32,17 @@ def error_process(index):
 
 
 def generate_token():
-    key = '&*312#'
     ctime = int(time.time())
     md5 = hashlib.md5()
-    md5.update('%s%s%d' % (host, key, ctime))
+    md5.update('%s%s%d' % (host, public_key, ctime))
     return '%s|%s' % (md5.hexdigest(), ctime)
 
+#    url = 'http://wenku.baidu.com/api/interface/gettoken?host=%s&secretKey=%s' % (host, secret_key)
+#    result = eval(urllib2.urlopen(url).read())
+#    if 0 != result['status']['code']:
+#        LOG.info(result)
+#        return ''
+#    return result['data']['token']
 
 class UploadQuestion(web.RequestHandler):
 
@@ -201,7 +209,7 @@ class UploadQuestion(web.RequestHandler):
 
 					db = Mysql()
 
-					question_sql = "insert into entity_question (difficulty,question_docx,html,upload_time,question_type,subject_id,new_format,upload_id,upload_src,question_group,grade_id) values (%(level)d,'%(json)s','%(html)s',now(),'%(type)s',%(subject_id)d,1,%(upload_id)d,%(upload_src)d,%(question_group)d,%(grade_id)d);"
+					question_sql = "insert into entity_question (difficulty,question_docx,html,upload_time,question_type,subject_id,new_format,upload_id,upload_src,question_group,grade_id,state) values (%(level)d,'%(json)s','%(html)s',now(),'%(type)s',%(subject_id)d,1,%(upload_id)d,%(upload_src)d,%(question_group)d,%(grade_id)d,'ENABLED');"
 					
 					link_topic_sql = "insert into link_question_topic (question_id,topic_id) values (%(q_id)d,%(t_id)d);"
 
@@ -214,7 +222,7 @@ class UploadQuestion(web.RequestHandler):
 						question_res = db.exec_event(question_sql,level = int(question_level),json = json_key,html = html_key,type = type_name,subject_id = int(subject_id),upload_id = int(system_id),upload_src = int(org_type),question_group = int(question_group),grade_id = int(grade_id))
 						question_sql = db.get_last_sql()
 						question_id = db.get_last_id()
-						LOG.info('RES[%s] - INS[%d]' % (question_sql,question_res,question_id))
+						LOG.info('RES[%s] - INS[%d]' % (question_res,question_id))
 				
 						if Base.empty(question_topic) is False:
 							topic_list = question_topic.split(',')
@@ -222,7 +230,7 @@ class UploadQuestion(web.RequestHandler):
 								topic_res = db.exec_event(link_topic_sql,q_id = int(question_id),t_id = int(question_theme))
 								topic_sql = db.get_last_sql()
 								topic_id = db.get_last_id()
-								LOG.info('RES[%s] - INS[%d]' % (link_topic_sql,topic_res,topic_id))
+								LOG.info('RES[%s] - INS[%d]' % (topic_res,topic_id))
 						if Base.empty(question_seriess) is False:
 							seriess_list = question_seriess.split(',')
 
@@ -230,7 +238,7 @@ class UploadQuestion(web.RequestHandler):
 								series_res = db.exec_event(link_series_sql,q_id = int(question_id),s_id = int(question_special))
 								series_sql = db.get_last_sql()
 								series_id = db.get_last_id()
-								LOG.info('RES[%s] - INS[%d]' % (link_series_sql,series_res,series_id))
+								LOG.info('RES[%s] - INS[%d]' % (series_res,series_id))
 
 					except DBException as e:
 						db.rollback()
@@ -274,24 +282,16 @@ class UploadQuestion(web.RequestHandler):
 		self.write(json.dumps(ret))
 		self.finish()
 
+
 class get_exercises(web.RequestHandler):
 
     def get(self):
 
         self.set_header("Access-Control-Allow-Origin", "*")
-
         if set(self.request.arguments.keys()) != set(['id']):
             LOG.error('invalid parameter keys: %s' % self.request.arguments)
             return self.write(error_process(1))
-
         topic_id = int(self.request.arguments['id'][0])
-#        timestamp = self.request.arguments['timestamp'][0]
-#        secret = self.request.arguments['secret'][0]
-
-#        secret_key = '%d%s' % (topic_id, timestamp)
-#        if secret != sha1(secret_key).hexdigest():
-#            LOG.error('sign error! secret_key: %s' % secret_key)
-#            return self.write(error_process(3))
 
         try:
             mysql = Mysql().get_handle()
@@ -325,15 +325,23 @@ class get_exercises(web.RequestHandler):
 #            print 'special: %s' % special_list
 
             mongo = Mongo().get_handle()
-            json_body = mongo.resource.mongo_question_json.find_one( { 'question_id' : topic_id }, { '_id' : 0 } )
-            if not json_body: # or 'body' not in result:
+            json_body = mongo.resource.mongo_question_json.find_one( { 'question_id' : topic_id } )
+            if not json_body: # or 'content' not in json_body:
                 LOG.error('json body of question_id[%d] nonexistent!' % topic_id)
                 return self.write(error_process(2))
+            if 'content' in json_body:
+                json_body = json_body['content']
+            else:
+                json_body = {}
 
-            html_body = mongo.resource.mongo_question_html.find_one( { 'question_id' : topic_id }, { '_id' : 0 } )
-            if not html_body: # or 'body' not in result:
+            html_body = mongo.resource.mongo_question_html.find_one( { 'question_id' : topic_id } )
+            if not html_body: # or 'content' not in html_body:
                 LOG.error('html body of question_id[%d] nonexistent!' % topic_id)
                 return self.write(error_process(2))
+            if 'content' in html_body:
+                html_body = html_body['content']
+            else:
+                html_body = {}
 
             result            = error_process(0)
             result['json']    = json_body
@@ -355,6 +363,7 @@ class get_exercises(web.RequestHandler):
         except Exception, e:
             LOG.error(e)
             return self.write(error_process(100))
+
 
 class update_exercises(web.RequestHandler):
 
@@ -388,9 +397,11 @@ class update_exercises(web.RequestHandler):
  
             try:
                 question_json = urllib.unquote(question_json)
-                encode_json   = json.loads(question_json, encoding = 'utf-8')
+                encode_json = {}
+                encode_json['content'] = json.loads(question_json, encoding = 'utf-8')
                 question_html = urllib.unquote(question_html)
-                encode_html   = json.loads(question_html, encoding = 'utf-8')
+                encode_html = {}
+                encode_html['content'] = json.loads(question_html, encoding = 'utf-8')
             except:
                 traceback.print_exc()
                 LOG.error(sys.exc_info())
@@ -472,25 +483,76 @@ class update_exercises(web.RequestHandler):
 
 
 class search_keyword(web.RequestHandler):
-
-    def post(self):
-
-        self.set_header("Access-Control-Allow-Origin", "*")
-
-        if set(self.request.arguments.keys()) != set(['word', 'page_num']):
+    def get(self):
+        if not set(['word', 'page_num']).issubset(self.request.arguments.keys()):
             LOG.error('invalid parameter keys: %s' % self.request.arguments.keys())
             return self.write(error_process(1))
-
         word = self.request.arguments['word'][0]
         page_num = int(self.request.arguments['page_num'][0])
-
         url = 'http://wenku.baidu.com/api/interface/search?word=%s&pn=%d&token=%s&host=%s' % (word, page_num, generate_token(), host)
-        docs = eval(urllib2.urlopen(url).read())['data']
+        LOG.debug(url)
+        docs = json.loads(urllib2.urlopen(url).read().decode('raw_unicode_escape'))
+        if 0 != docs['status']['code']:
+            LOG.error(docs['status'])
+            return self.write(error_process(100))
+        ret = dict(error_process(0).items() + docs['data'].items())
+        if 'jsonp' in self.request.arguments.keys():
+            jsonp = self.request.arguments['jsonp'][0]
+            return self.write('%s(%s)' % (jsonp, json.dumps(ret, ensure_ascii=False)))
+        return self.write(json.dumps(ret, ensure_ascii=False))
 
+
+class get_class(web.RequestHandler):
+    def get(self):
+        url = 'http://wenku.baidu.com/api/interface/getclass?token=%s&host=%s' % (generate_token(), host)
+        LOG.debug(url)
+        ret = json.loads(urllib2.urlopen(url).read().decode('raw_unicode_escape'))
+        if 0 != ret['status']['code']:
+            LOG.error(ret['status'])
+            return self.write(error_process(100))
         result = error_process(0)
-        result['docsnum'] = docs['docsnum']
-        result['docinfo'] = docs['docinfo']
+        result['data'] = ret['data']
+#        return self.write(json.dumps(result, indent=4, ensure_ascii=False))
+        return self.write(json.dumps(result, ensure_ascii=False))
 
-        LOG.debug(result)
 
+class get_token(web.RequestHandler):
+    def get(self):
+        self.set_header("Access-Control-Allow-Origin", "*")
+        return self.write(generate_token())
+
+
+class get_subject(web.RequestHandler):
+    def get(self):
+        if not set(['subject', 'grade', 'version', 'unit', 'lesson', 'pn']).issubset(self.request.arguments.keys()):
+            LOG.error('invalid parameter keys: %s' % self.request.arguments.keys())
+            return self.write(error_process(1))
+        subject = self.request.arguments['subject'][0]
+        grade = self.request.arguments['grade'][0]
+        version = self.request.arguments['version'][0]
+        unit = self.request.arguments['unit'][0]
+        lesson = self.request.arguments['lesson'][0]
+        page_num = int(self.request.arguments['pn'][0])
+        url = 'http://wenku.baidu.com/api/interface/getsubject?subject=%s&grade=%s&version=%s&Unite=%s&Lesson=%s&pn=%d&token=%s&host=%s' % (subject, grade, version, unit, lesson, page_num, generate_token(), host)
+        LOG.debug(url)
+        ret = json.loads(urllib2.urlopen(url).read().decode('raw_unicode_escape'))
+        if 0 != ret['status']['code']:
+            LOG.error(ret['status'])
+            return self.write(error_process(100))
+        ret = dict(error_process(0).items() + ret['data'].items())
+#        return self.write(json.dumps(ret, indent=4, ensure_ascii=False))
+        return self.write(json.dumps(ret, ensure_ascii=False))
+
+
+class doc_download(web.RequestHandler):
+    def get(self):
+        if not set(['doc_id']).issubset(self.request.arguments.keys()):
+            LOG.error('invalid parameter keys: %s' % self.request.arguments.keys())
+            return self.write(error_process(1))
+        doc_id = self.request.arguments['doc_id'][0]
+        url = 'http://wenku.baidu.com/api/interface/download?doc_id=%s&token=%s&host=%s' % (doc_id, generate_token(), host)
+        LOG.debug(url)
+        result = error_process(0)
+        result['url'] = url
         return self.write(result)
+
