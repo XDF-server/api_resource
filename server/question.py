@@ -521,13 +521,17 @@ class search_keyword(web.RequestHandler):
     def get(self):
         LOG.debug('enter %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
         if not set(['word', 'page_num']).issubset(self.request.arguments.keys()):
-            LOG.error('invalid parameter keys: %s' % self.request.arguments.keys())
             LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(1)))
             return self.write(error_process(1))
-        word = self.request.arguments['word'][0]
-        LOG.info( { 'keyword': word } )
+        keyword = self.request.arguments['word'][0]
+        if not keyword:
+            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(1)))
+            return self.write(error_process(1))
+        LOG.info( { 'keyword': keyword } )
         page_num = int(self.request.arguments['page_num'][0])
-        url = 'http://wenku.baidu.com/api/interface/search?word=%s&pn=%d&token=%s&host=%s' % (word, page_num, generate_token(), host)
+        if not page_num:
+            page_num = 0
+        url = 'http://wenku.baidu.com/api/interface/search?%s' % urllib.urlencode({ 'word': keyword, 'pn': page_num, 'token': generate_token(), 'host': host })
         LOG.info(url)
         docs = json.loads(urllib2.urlopen(url).read().decode('raw_unicode_escape'))
         if 0 != docs['status']['code']:
