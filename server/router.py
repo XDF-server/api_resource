@@ -29,6 +29,7 @@ if __name__ == "__main__":
 		(r'/api/upload_question',UploadQuestion),
         	(r'/api/get_exercises', get_exercises),
         	(r'/api/update_exercises', update_exercises),
+        	(r'/api/delete_exercises', delete_exercises),
         	(r'/api/search_keyword', search_keyword),
         	(r'/api/get_class', get_class),
         	(r'/api/get_token', get_token),

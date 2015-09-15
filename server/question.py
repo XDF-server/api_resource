@@ -19,10 +19,12 @@ from qiniu_wrap import QiniuWrap
 from tornado import web, httpclient, gen
 from exception import DBException, CKException
 
-#host = 'jiaoshi.okjiaoyu.cn'
-host = 'wenku.baidu.com'
-public_key = '&*312#'
-secret_key = '6f614cb00c6b6821e3cdc85ab1f8f907'
+#public_key = '&*312#'
+#host = 'wenku.baidu.com'
+#secret_key = '6f614cb00c6b6821e3cdc85ab1f8f907'
+public_key = '$@a5d3'
+host = 'xdf.baidu.com'
+secret_key = '358ce98368a638bd23583c38cbddc1d1'
 
 def error_process(index):
     msg = [ { "error_code" : 0, "error_msg" : "success" }, { "error_code" : 1, "error_msg" : "invalid parameters" }, { "error_code" : 2, "error_msg" : "resources nonexistent" }, { "error_code" : 3, "error_msg" : "sign error" } ] 
@@ -134,7 +136,7 @@ class UploadQuestion(web.RequestHandler):
 				ret['message'] = 'invalid parameters'
 				LOG.error('ERR[json format invalid]') 
 				break
-			
+
 			except CKException: 
 				ret['code'] = 3
 				ret['message'] = 'server error'
@@ -284,50 +286,60 @@ class UploadQuestion(web.RequestHandler):
 
 
 class get_exercises(web.RequestHandler):
-
     def get(self):
-
+        LOG.debug('enter %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
         self.set_header("Access-Control-Allow-Origin", "*")
-        if set(self.request.arguments.keys()) != set(['id']):
-            LOG.error('invalid parameter keys: %s' % self.request.arguments)
+        if not set(['id']).issubset(self.request.arguments.keys()):
+            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(1)))
             return self.write(error_process(1))
         topic_id = int(self.request.arguments['id'][0])
 
         try:
             mysql = Mysql().get_handle()
             cursor = mysql.cursor(MySQLdb.cursors.DictCursor)
-            cursor.execute('SELECT question_type, subject_id, difficulty, question_group FROM entity_question WHERE id = %d' % topic_id)
+            sql = 'SELECT question_type, subject_id, difficulty, question_group FROM entity_question WHERE id = %d' % topic_id
+            LOG.info('mysql> %s' % sql)
+            cursor.execute(sql)
             result = cursor.fetchall()
             if not result and 1 != len(result):
-                LOG.error('abnormal topic_id[%d]!' % topic_id)
+                LOG.error('topic_id[%d] nonexistent or abnormal.' % topic_id)
+                LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(2)))
                 return self.write(error_process(2))
-            level_id = result[0]['difficulty']
+            level_id   = result[0]['difficulty']
+            group_id   = result[0]['question_group']
             topic_type = result[0]['question_type']
             subject_id = result[0]['subject_id']
-            group_id = result[0]['question_group']
 
             # 获取题目类型
-            cursor.execute('SELECT type_id id, name FROM entity_question_type WHERE name = "%s"' % topic_type)
+            sql = 'SELECT type_id id, name FROM entity_question_type WHERE name = "%s"' % topic_type
+            LOG.info('mysql> %s' % sql)
+            cursor.execute(sql)
             topic_type = cursor.fetchall()
             if not topic_type and 1 != len(topic_type):
-                LOG.error('abnormal type of topic_id[%d]!' % topic_id)
+                LOG.error('topic_type[%s] of topic_id[%d] nonexistent or abnormal.' % (topic_type, topic_id))
+                LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments), error_process(2))
                 return self.write(error_process(2))
 #            print 'topic_type: %s' % topic_type
 
             # 获取主题
-            cursor.execute('select id, substring_index(name, "\n", 1) name from entity_topic where id in (select topic_id from link_question_topic where question_id = %d)' % topic_id)
+            sql = 'select id, substring_index(name, "\n", 1) name from entity_topic where id in (select topic_id from link_question_topic where question_id = %d)' % topic_id
+            LOG.info('mysql> %s' % repr(sql)[1:-1])
+            cursor.execute(sql)
             theme_list = list(cursor.fetchall())
 #            print 'theme: %s' % theme_list
 
             # 获取专题
-            cursor.execute('select id, substring_index(name, "\n", 1) name from entity_seriess where id in (select series_id from link_question_series where question_id = %d)' % topic_id)
+            sql = 'select id, substring_index(name, "\n", 1) name from entity_seriess where id in (select series_id from link_question_series where question_id = %d)' % topic_id
+            LOG.info('mysql> %s' % repr(sql)[1:-1])
+            cursor.execute(sql)
             special_list = list(cursor.fetchall())
 #            print 'special: %s' % special_list
 
             mongo = Mongo().get_handle()
             json_body = mongo.resource.mongo_question_json.find_one( { 'question_id' : topic_id } )
-            if not json_body: # or 'content' not in json_body:
-                LOG.error('json body of question_id[%d] nonexistent!' % topic_id)
+            if not json_body:
+                LOG.error('json body of question_id[%d] is nonexistent in MongoDB.' % topic_id)
+                LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(2)))
                 return self.write(error_process(2))
             if 'content' in json_body:
                 json_body = json_body['content']
@@ -335,8 +347,9 @@ class get_exercises(web.RequestHandler):
                 json_body = {}
 
             html_body = mongo.resource.mongo_question_html.find_one( { 'question_id' : topic_id } )
-            if not html_body: # or 'content' not in html_body:
-                LOG.error('html body of question_id[%d] nonexistent!' % topic_id)
+            if not html_body:
+                LOG.error('html body of question_id[%d] is nonexistent in MongoDB.' % topic_id)
+                LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(2)))
                 return self.write(error_process(2))
             if 'content' in html_body:
                 html_body = html_body['content']
@@ -346,22 +359,24 @@ class get_exercises(web.RequestHandler):
             result            = error_process(0)
             result['json']    = json_body
             result['html']    = html_body
+            result['type']    = topic_type[0]
             result['topic']   = theme_list
-            result['seriess'] = special_list
             result['level']   = level_id
             result['group']   = group_id
-            result['type']    = topic_type[0]
-
-            self.write(json.dumps(result, ensure_ascii=False))
+            result['seriess'] = special_list
 
             mongo.close()
             cursor.close()
             mysql.close()
-        except MySQLdb.Error, e:
-            LOG.error(e)
-            return self.write(error_process(100))
+
+            LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+            return self.write(json.dumps(result, ensure_ascii=False))
+#        except MySQLdb.Error, e:
+#            LOG.error(e)
+#            return self.write(error_process(100))
         except Exception, e:
             LOG.error(e)
+            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(100)))
             return self.write(error_process(100))
 
 
@@ -482,36 +497,66 @@ class update_exercises(web.RequestHandler):
             return self.write(error_process(100))
 
 
+class delete_exercises(web.RequestHandler):
+    def get(self):
+        LOG.debug('enter %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+        if not set(['id']).issubset(self.request.arguments.keys()):
+            LOG.error('invalid parameter keys: %s' % self.request.arguments.keys())
+            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments), error_process(1))
+            return self.write(error_process(1))
+        id = int(self.request.arguments['id'][0])
+        mysql_handle = Mysql().get_handle()
+        mysql_cursor = mysql_handle.cursor(MySQLdb.cursors.DictCursor)
+        sql = 'UPDATE entity_question SET state = "DISABLED" WHERE id = %d' % id
+        LOG.info('mysql> %s' % sql)
+        mysql_cursor.execute(sql)
+        mysql_handle.commit()
+        mysql_cursor.close()
+        mysql_handle.close()
+        LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+        return self.write(error_process(0))
+
+
 class search_keyword(web.RequestHandler):
     def get(self):
+        LOG.debug('enter %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
         if not set(['word', 'page_num']).issubset(self.request.arguments.keys()):
             LOG.error('invalid parameter keys: %s' % self.request.arguments.keys())
+            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(1)))
             return self.write(error_process(1))
         word = self.request.arguments['word'][0]
+        LOG.info( { 'keyword': word } )
         page_num = int(self.request.arguments['page_num'][0])
         url = 'http://wenku.baidu.com/api/interface/search?word=%s&pn=%d&token=%s&host=%s' % (word, page_num, generate_token(), host)
-        LOG.debug(url)
+        LOG.info(url)
         docs = json.loads(urllib2.urlopen(url).read().decode('raw_unicode_escape'))
         if 0 != docs['status']['code']:
             LOG.error(docs['status'])
+            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(100)))
             return self.write(error_process(100))
         ret = dict(error_process(0).items() + docs['data'].items())
         if 'jsonp' in self.request.arguments.keys():
             jsonp = self.request.arguments['jsonp'][0]
+            LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
             return self.write('%s(%s)' % (jsonp, json.dumps(ret, ensure_ascii=False)))
+        LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+#        return self.write(json.dumps(ret, indent=4, ensure_ascii=False))
         return self.write(json.dumps(ret, ensure_ascii=False))
 
 
 class get_class(web.RequestHandler):
     def get(self):
+        LOG.debug('enter %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
         url = 'http://wenku.baidu.com/api/interface/getclass?token=%s&host=%s' % (generate_token(), host)
-        LOG.debug(url)
+        LOG.info(url)
         ret = json.loads(urllib2.urlopen(url).read().decode('raw_unicode_escape'))
         if 0 != ret['status']['code']:
             LOG.error(ret['status'])
+            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(100)))
             return self.write(error_process(100))
         result = error_process(0)
         result['data'] = ret['data']
+        LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
 #        return self.write(json.dumps(result, indent=4, ensure_ascii=False))
         return self.write(json.dumps(result, ensure_ascii=False))
 
@@ -524,8 +569,10 @@ class get_token(web.RequestHandler):
 
 class get_subject(web.RequestHandler):
     def get(self):
+        LOG.debug('enter %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
         if not set(['subject', 'grade', 'version', 'unit', 'lesson', 'pn']).issubset(self.request.arguments.keys()):
             LOG.error('invalid parameter keys: %s' % self.request.arguments.keys())
+            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(1)))
             return self.write(error_process(1))
         subject = self.request.arguments['subject'][0]
         grade = self.request.arguments['grade'][0]
@@ -534,25 +581,30 @@ class get_subject(web.RequestHandler):
         lesson = self.request.arguments['lesson'][0]
         page_num = int(self.request.arguments['pn'][0])
         url = 'http://wenku.baidu.com/api/interface/getsubject?subject=%s&grade=%s&version=%s&Unite=%s&Lesson=%s&pn=%d&token=%s&host=%s' % (subject, grade, version, unit, lesson, page_num, generate_token(), host)
-        LOG.debug(url)
+        LOG.info(url)
         ret = json.loads(urllib2.urlopen(url).read().decode('raw_unicode_escape'))
         if 0 != ret['status']['code']:
             LOG.error(ret['status'])
+            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(100)))
             return self.write(error_process(100))
         ret = dict(error_process(0).items() + ret['data'].items())
+        LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
 #        return self.write(json.dumps(ret, indent=4, ensure_ascii=False))
         return self.write(json.dumps(ret, ensure_ascii=False))
 
 
 class doc_download(web.RequestHandler):
     def get(self):
+        LOG.debug('enter %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
         if not set(['doc_id']).issubset(self.request.arguments.keys()):
             LOG.error('invalid parameter keys: %s' % self.request.arguments.keys())
+            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(1)))
             return self.write(error_process(1))
         doc_id = self.request.arguments['doc_id'][0]
         url = 'http://wenku.baidu.com/api/interface/download?doc_id=%s&token=%s&host=%s' % (doc_id, generate_token(), host)
-        LOG.debug(url)
+        LOG.info(url)
         result = error_process(0)
         result['url'] = url
+        LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
         return self.write(result)
 
