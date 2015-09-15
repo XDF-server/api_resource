@@ -517,17 +517,26 @@ class delete_exercises(web.RequestHandler):
         return self.write(error_process(0))
 
 
+def enter_func(self):
+    LOG.debug('enter %s(%s) ...' % (self.__class__.__name__, json.dumps(self.request.arguments, ensure_ascii=False)))
+
+
+def leave_func(self, code):
+    if 0 == code:
+        LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, json.dumps(self.request.arguments, ensure_ascii=False)))
+    else:
+        LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, json.dumps(self.request.arguments, ensure_ascii=False), error_process(code)))
+        self.write(error_process(code))
+
+
 class search_keyword(web.RequestHandler):
     def get(self):
-        LOG.debug('enter %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+        enter_func(self)
         if not set(['word', 'page_num']).issubset(self.request.arguments.keys()):
-            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(1)))
-            return self.write(error_process(1))
+            return leave_func(self, 1)
         keyword = self.request.arguments['word'][0]
         if not keyword:
-            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(1)))
-            return self.write(error_process(1))
-        LOG.info( { 'keyword': keyword } )
+            return leave_func(self, 1)
         page_num = int(self.request.arguments['page_num'][0])
         if not page_num:
             page_num = 0
@@ -536,15 +545,13 @@ class search_keyword(web.RequestHandler):
         docs = json.loads(urllib2.urlopen(url).read().decode('raw_unicode_escape'))
         if 0 != docs['status']['code']:
             LOG.error(docs['status'])
-            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(100)))
-            return self.write(error_process(100))
+            return leave_func(self, 100)
         ret = dict(error_process(0).items() + docs['data'].items())
         if 'jsonp' in self.request.arguments.keys():
             jsonp = self.request.arguments['jsonp'][0]
-            LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+            leave_func(self, 0)
             return self.write('%s(%s)' % (jsonp, json.dumps(ret, ensure_ascii=False)))
-        LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
-#        return self.write(json.dumps(ret, indent=4, ensure_ascii=False))
+        leave_func(self, 0)
         return self.write(json.dumps(ret, ensure_ascii=False))
 
 
