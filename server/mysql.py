@@ -120,8 +120,6 @@ class Mysql(object):
 			raise DBException('format failed')
 	
 		if self.cur.rowcount:
-			if self.event_flag is False:
-				self.commit()
 		
 			return True
 		

@@ -17,7 +17,7 @@ class Loader(object):
 
 		logger = Logger(info = log_info,path = log_path,format = log_format)
 		LOG = logger.get_logger()
-		'''	
+			
 		from mongo import Mongo
 
 		mongo = Mongo()
@@ -33,5 +33,5 @@ class Loader(object):
 		from qiniu_wrap import QiniuWrap
 
 		qiniu = QiniuWrap
-		'''
+		
 
