@@ -1,4 +1,4 @@
-# *-* conding:utf-8 *-*
+# *-* coding:utf-8 *-*
 
 from design_model import singleton
 from pymongo import MongoClient
@@ -58,14 +58,6 @@ class Mongo(object):
 
         def remove(self, data):
             return self.collection.remove(data)
-
-'''
-db = Mongo()
-db.connect('resource')
-db.select_collection('mongo_subject_json')
-data = {'hahah':'fjlfdjfdl','fjdlfjdsf':'fjnbn','jfkjflds':'jfdjfld'}
-print db.insert_one(data)
-'''			
 
 
 
