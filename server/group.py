@@ -487,4 +487,113 @@ class DeleteGroup(web.RequestHandler):
 		LOG.info('PARAMETER OUT[%s]' % ret)
 		LOG.info('API OUT[%s]' % (self.__class__.__name__))
 
+class TransferGroup(web..RequestHandler):
+	
+	@web.asynchronous
+	@gen.engine
+	def post(self):
+		
+		for i in range(1):
+
+                        LOG.info('API IN[%s]' % (self.__class__.__name__))
+                        LOG.info('PARAMETER IN[%s]' % self.request.arguments)
+
+                        ret = {'code':'','message':''}
+
+                        essential_keys = set(['question_id','group_id'])
+
+                        if Base.check_parameter(set(self.request.arguments.keys()),essential_keys):
+                                ret['code'] = 1 
+                                ret['message'] = 'invalid parameter'
+                                LOG.error('ERROR[in parameter invalid]')
+                                break
+                            
+                        question_id = int(''.join(self.request.arguments['question_id']))
+			group_id = int(''.join(self.request.arguments['group_id']))
+
+                        if Base.empty(question_id) or Base.empty(group_id):
+                                ret['code'] = 1 
+                                ret['message'] = 'invalid parameter'
+                                LOG.error('ERROR[parameter empty]')
+                                break
+
+                        configer = Configer()
+                        remote_host = configer.get_configer('REMOTE','host')
+                        remote_port = configer.get_configer('REMOTE','port')
+                        remote_uri = configer.get_configer('REMOTE','uri')
+
+                        remote_url = "http://%s:%s/%s" % (remote_host,remote_port,remote_uri)
+                            
+                        token = self.get_cookie("teacher_id")
+                        LOG.info('TOKEN[%s]' % token)
+
+                        if token is None:
+                                ret['code'] = 6 
+                                ret['message'] = 'invalid token'
+                                LOG.error('ERROR[token empty]')
+                                break
+
+                        post_data = {'token' : token}
+                            
+                        client = httpclient.AsyncHTTPClient()
+                        response = yield gen.Task(client.fetch,remote_url,method = 'POST',body = urllib.urlencode(post_data))
+                        #response = Http.post(remote_url,post_data)
+
+                        LOG.info('REMOTE RES CODE[%d]' % response.code)
+
+                        if 200 == response.code:
+                                encode_body = json.loads(response.body)
+
+                                if 0 == encode_body['code'] or 2 == encode_body['code']:
+                                        ret['code'] = 7 
+                                        ret['message'] = 'invalid token'
+                                        LOG.error('ERROR[token not exist]')
+                                        break
+
+                                if 1 == encode_body['code']:
+                                        subject_id = encode_body['subject_id']
+                                        grade_id = encode_body['grade_id']
+                                        system_id = encode_body['system_id']
+                                        org_type = encode_body['org_type']                                  
+
+                                        db = Mysql()
+                            
+                                        question_sql = "update entity_question set question_group=%(group_id)d where upload_id=%(system_id)d and id=%(question_id)d;"      
+
+                                        try:
+                                                db.connect_master()
+
+                                                question_res = db.query(question_sql,question_id = int(question_id),system_id
+= int(system_id),group_id=int(group_id))                                   
+                                                
+						question_sql = db.get_last_sql()
+                                                LOG.info('SQL[%s] - RES[%s]' % (question_sql,question_res))
+
+                                        except DBException as e:
+                                                db.rollback()
+                                                ret['code'] = 3
+                                                ret['message'] = 'server error'
+                                                LOG.error('ERROR[mysql error]')
+                                                break
+
+                                else:
+                                        ret['code'] = 3
+                                        ret['message'] = 'server error'
+                                        LOG.error('ERROR[remote error]')
+                                        break
+
+                        else:
+                                ret['code'] = 3
+                                ret['message'] = 'server error'
+                                LOG.error('ERROR[remote error]')
+                                break
+
+                        ret['code'] = 0
+                        ret['message'] = 'success'
+                        break                         
+                            
+                self.write(json.dumps(ret))
+                self.finish()
+                LOG.info('PARAMETER OUT[%s]' % ret)
+                LOG.info('API OUT[%s]' % (self.__class__.__name__))
 
