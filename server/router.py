@@ -35,6 +35,7 @@ if __name__ == "__main__":
         	(r'/api/get_token', get_token),
         	(r'/api/get_subject', get_subject),
         	(r'/api/doc_download', doc_download),
+        	(r'/api/get_doc_info', get_doc_info),
 		(r'/api/create_group',CreateGroup),
 		(r'/api/get_group_list',GetGroupList),
 		(r'/api/update_group',UpdateGroup),

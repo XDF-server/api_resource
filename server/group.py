@@ -487,7 +487,7 @@ class DeleteGroup(web.RequestHandler):
 		LOG.info('PARAMETER OUT[%s]' % ret)
 		LOG.info('API OUT[%s]' % (self.__class__.__name__))
 
-class TransferGroup(web..RequestHandler):
+class TransferGroup(web.RequestHandler):
 	
 	@web.asynchronous
 	@gen.engine
