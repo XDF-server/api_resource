@@ -211,7 +211,7 @@ class UploadQuestion(web.RequestHandler):
 
 					db = Mysql()
 
-					question_sql = "insert into entity_question (difficulty,question_docx,html,upload_time,question_type,subject_id,new_format,upload_id,upload_src,question_group,grade_id,state) values (%(level)d,'%(json)s','%(html)s',now(),'%(type)s',%(subject_id)d,1,%(upload_id)d,%(upload_src)d,%(question_group)d,%(grade_id)d,'ENABLED');"
+					question_sql = "insert into entity_question (difficulty,question_docx,html,upload_time,question_type,subject_id,new_format,upload_id,upload_src,question_group,grade_id,state,is_single) values (%(level)d,'%(json)s','%(html)s',now(),'%(type)s',%(subject_id)d,1,%(upload_id)d,%(upload_src)d,%(question_group)d,%(grade_id)d,'RAW',1);"
 					
 					link_topic_sql = "insert into link_question_topic (question_id,topic_id) values (%(q_id)d,%(t_id)d);"
 
