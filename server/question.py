@@ -552,6 +552,7 @@ class search_keyword(web.RequestHandler):
         url = 'http://wenku.baidu.com/api/interface/search?%s' % urllib.urlencode({ 'word': keyword, 'pn': page_num, 'rn': page_size, 'token': generate_token(), 'host': host })
         LOG.info(url)
         docs = json.loads(urllib2.urlopen(url).read().decode('raw_unicode_escape'))
+        LOG.info(docs)
         if 0 != docs['status']['code']:
             LOG.error(docs['status'])
             return leave_func(self, 100)
@@ -566,26 +567,26 @@ class search_keyword(web.RequestHandler):
 
 class get_class(web.RequestHandler):
     def get(self):
-        LOG.debug('enter %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+        enter_func(self)
         params = { 'token': generate_token(), 'host': host, 'zone': 8 }
         if 'zone' in self.request.arguments.keys() and self.request.arguments['zone'][0].isdigit():
             params['zone'] = int(self.request.arguments['zone'][0])
         redis_handle = redis.Redis(Configer().get_configer('REDIS', 'host'))
         if redis_handle.exists('json_class:%d' % params['zone']):
-            LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+            leave_func(self, 0)
             return self.write(redis_handle.get('json_class:%d' % params['zone']))
         url = 'http://wenku.baidu.com/api/interface/getclass?%s' % urllib.urlencode(params)
         LOG.info(url)
         ret = json.loads(urllib2.urlopen(url).read().decode('raw_unicode_escape'))
+        LOG.info(ret)
         if 0 != ret['status']['code']:
-            LOG.error(ret['status'])
-            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(100)))
-            return self.write(error_process(100))
+            LOG.error('baidu library interface error: %s' % ret['status'])
+            return leave_func(self, 100)
         result = error_process(0)
         result['data'] = ret['data']
         result = json.dumps(result, sort_keys=True, ensure_ascii=False)
         redis_handle.set('json_class:%d' % params['zone'], result)
-        LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+        leave_func(self, 0)
         return self.write(result)
 
 
@@ -597,7 +598,7 @@ class get_token(web.RequestHandler):
 
 class get_subject(web.RequestHandler):
     def get(self):
-        LOG.debug('enter %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+        enter_func(self)
         if not set(['subject', 'grade', 'version']).issubset(self.request.arguments.keys()):
             return leave_func(self, 1)
         params = { 'subject': self.request.arguments['subject'][0], 'grade': self.request.arguments['grade'][0], 'version': self.request.arguments['version'][0] }
@@ -622,17 +623,18 @@ class get_subject(web.RequestHandler):
         url = 'http://wenku.baidu.com/api/interface/getsubject?%s' % urllib.urlencode(params)
         LOG.info(url)
         ret = json.loads(urllib2.urlopen(url).read().decode('raw_unicode_escape'))
+        LOG.info(ret)
         if 0 != ret['status']['code']:
-            LOG.error(ret['status'])
+            LOG.error('baidu library interface error: %s' % ret['status'])
             return leave_func(self, 100)
         ret = dict(error_process(0).items() + ret['data'].items())
-        LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+        leave_func(self, 0)
         return self.write(json.dumps(ret, ensure_ascii=False))
 
 
 class doc_download(web.RequestHandler):
     def get(self):
-        LOG.debug('enter %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+        enter_func(self)
         if not set(['doc_id']).issubset(self.request.arguments.keys()):
             return leave_func(self, 1)
         doc_id = self.request.arguments['doc_id'][0]
@@ -643,13 +645,13 @@ class doc_download(web.RequestHandler):
         LOG.info(url)
         result = error_process(0)
         result['url'] = url
-        LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+        leave_func(self, 0)
         return self.write(result)
 
 
 class get_doc_info(web.RequestHandler):
     def get(self):
-        LOG.debug('enter %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+        enter_func(self)
         if not set(['doc_id']).issubset(self.request.arguments.keys()):
             return leave_func(self, 1)
         doc_id = self.request.arguments['doc_id'][0]
@@ -659,9 +661,11 @@ class get_doc_info(web.RequestHandler):
         url = 'http://wenku.baidu.com/api/interface/getdocinfobyid?doc_id=%s&token=%s&host=%s' % (doc_id, generate_token(), host)
         LOG.info(url)
         ret = json.loads(urllib2.urlopen(url).read().decode('raw_unicode_escape'))
+        LOG.info(ret)
         if 0 != ret['status']['code']:
-            LOG.error(ret['status'])
+            LOG.error('baidu library interface error: %s' % ret['status'])
             return leave_func(self, 100)
         ret = dict(error_process(0).items() + ret['data'].items())
-        LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+        leave_func(self, 0)
         return self.write(ret)
+
