@@ -500,11 +500,9 @@ class update_exercises(web.RequestHandler):
 
 class delete_exercises(web.RequestHandler):
     def get(self):
-        LOG.debug('enter %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+        enter_func(self)
         if not set(['id']).issubset(self.request.arguments.keys()):
-            LOG.error('invalid parameter keys: %s' % self.request.arguments.keys())
-            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments), error_process(1))
-            return self.write(error_process(1))
+            return leave_func(self, 1)
         id = int(self.request.arguments['id'][0])
         mysql_handle = Mysql().get_handle()
         mysql_cursor = mysql_handle.cursor(MySQLdb.cursors.DictCursor)
@@ -514,7 +512,7 @@ class delete_exercises(web.RequestHandler):
         mysql_handle.commit()
         mysql_cursor.close()
         mysql_handle.close()
-        LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+        leave_func(self, 0)
         return self.write(error_process(0))
 
 
