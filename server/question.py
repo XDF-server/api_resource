@@ -62,7 +62,7 @@ class UploadQuestion(web.RequestHandler):
 			
 			ret = {'code':'','message':''}
 
-			essential_keys = set(['json','html','topic','seriess','level','type','group'])
+			essential_keys = set(['json','html','topic','seriess','level','type','group','chapter'])
 
 			if Base.check_parameter(set(self.request.arguments.keys()),essential_keys):
 				ret['code'] = 1
@@ -77,6 +77,7 @@ class UploadQuestion(web.RequestHandler):
 			question_level = ''.join(self.request.arguments['level'])
 			question_type = ''.join(self.request.arguments['type'])
 			question_group = ''.join(self.request.arguments['group'])
+			question_chapter = ''.join(self.request.arguments['chapter'])
 
 			if Business.is_level(question_level) is False:
 				ret['code'] = 1
@@ -96,12 +97,17 @@ class UploadQuestion(web.RequestHandler):
 					LOG.error('ERR[topic and seriess empty]') 
 					break
 
+				if Base.empty(question_topic) and Base.empty(question_seriess) and Base.empty(question_chapter):
+					ret['code'] = 1
+					ret['message'] = 'invalid parameters'
+					LOG.error('ERR[topic and seriess empty]') 
+					break
+
 				if Base.empty(question_group):
 					ret['code'] = 1
 					ret['message'] = 'invalid parameters'
 					LOG.error('ERR[group empty]') 
 					break
-
 
 				if Base.empty(question_topic) is False:
 					topic_list = question_topic.split(',')
@@ -131,7 +137,12 @@ class UploadQuestion(web.RequestHandler):
 					LOG.error('ERR[type is invalid]') 
 					break
 
-				
+				if Business.chapter_id_exist(question_chapter) is False:
+					ret['code'] = 1
+					ret['message'] = 'invalid parameters'
+					LOG.error('ERR[seriess %s invalid]' % question_theme) 
+					break
+
 			except (ValueError,KeyError,TypeError):
 				ret['code'] = 1
 				ret['message'] = 'invalid parameters'
@@ -218,6 +229,8 @@ class UploadQuestion(web.RequestHandler):
 
 					link_series_sql = "insert into link_question_series (question_id,series_id) values (%(q_id)d,%(s_id)d);"
 
+					link_chapter_sql = "insert into link_question_chapter (question_id,chapter_id) values (%(q_id)d,%(c_id)d);"
+
 					try:
 						db.connect_master()
 						db.start_event()
@@ -243,6 +256,11 @@ class UploadQuestion(web.RequestHandler):
 								series_id = db.get_last_id()
 								LOG.info('RES[%s] - INS[%d]' % (series_res,series_id))
 
+						chapter_res = db.exec_event(link_chapter_sql,q_id = int(question_id),c_id = int(question_chapter))
+						chapter_sql = db.get_last_sql()
+						chapter_id = db.get_last_id()
+						LOG.info('RES[%s] - INS[%d]' % (chapter_res,chapter_id))
+						
 					except DBException as e:
 						db.rollback()
 						ret['code'] = 3

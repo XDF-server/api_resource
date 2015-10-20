@@ -40,6 +40,7 @@ if __name__ == "__main__":
 		(r'/api/get_group_list',GetGroupList),
 		(r'/api/update_group',UpdateGroup),
 		(r'/api/delete_group',DeleteGroup),
+		(r'/api/transfer_group',DeleteGroup),
 		(r'/api/uptoken',UpToken),
 		(r'/api/transcode',Transcode),
 		(r'/api/transcode_res',TranscodeRes),

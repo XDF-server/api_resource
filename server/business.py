@@ -55,6 +55,24 @@ class Business(object):
 			LOG.error('check topic error [%s]' % e)
 			raise CKException('check topic error')
 
+	@staticmethod
+	def chapter_id_exist(chapter_id):
+
+		mysql = Mysql()
+
+		mysql.connect_master()
+		
+		query_sql = "select 1 from entity_teaching_chapter where id='%(chapter_id)d';" 
+		
+		try:
+			if mysql.query(query_sql,chapter_id = int(chapter_id)):
+				return True
+			else:
+				return False
+
+		except DBException as e:
+			LOG.error('check chapter error [%s]' % e)
+			raise CKException('check chapter error')
 
 	@staticmethod
 	def group_name_exist(group_name,system_id):
