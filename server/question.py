@@ -405,7 +405,7 @@ class update_exercises(web.RequestHandler):
 
         self.set_header("Access-Control-Allow-Origin", "*")
 
-        if set(self.request.arguments.keys()) != set(['id', 'json', 'html', 'topic', 'seriess', 'level', 'type', 'group']):
+        if set(self.request.arguments.keys()) != set(['id', 'json', 'html', 'topic', 'seriess', 'level', 'type', 'group', 'chapter']):
             LOG.error('invalid parameter keys: %s' % self.request.arguments.keys())
             return self.write(error_process(1))
 
@@ -414,21 +414,26 @@ class update_exercises(web.RequestHandler):
         type_id       = int(self.request.arguments['type'][0])
         level_id      = int(self.request.arguments['level'][0])
         group_id      = int(self.request.arguments['group'][0])
+        chapter_id    = int(self.request.arguments['chapter'][0])
         question_id   = int(self.request.arguments['id'][0])
         question_json = self.request.arguments['json'][0]
         question_html = self.request.arguments['html'][0]
 
-        LOG.debug('question_id: %d, theme: %s, special: %s, level_id: %d, group_id: %d, type_id: %d, question_json: %s, question_html: %s' % (question_id, theme, special, level_id, group_id, type_id, question_json, question_html))
+        LOG.debug('question_id: %d, theme: %s, special: %s, level_id: %d, group_id: %d, chapter_id: %d, type_id: %d, question_json: %s, question_html: %s' % (question_id, theme, special, level_id, group_id, chapter_id, type_id, question_json, question_html))
 
         try:
+            if not (group_id and chapter_id and level_id and type_id and question_json and question_html and question_id and theme + special):
+                LOG.error('invalid parameters: %s' % self.request.arguments)
+                return self.write(error_process(1))
+ 
             if Business.is_level(level_id) is False:
                 LOG.error('invalid level_id[%d]' % level_id)
                 return self.write(error_process(1))
  
-            if not (level_id and type_id and question_json and question_html and question_id and theme + special):
-                LOG.error('invalid parameters: %s' % self.request.arguments)
+            if Business.chapter_id_exist(chapter_id) is False:
+                LOG.error('invalid chapter_id[%d]' % chapter_id)
                 return self.write(error_process(1))
- 
+
             try:
                 question_json = urllib.unquote(question_json)
                 encode_json = {}
@@ -444,7 +449,9 @@ class update_exercises(web.RequestHandler):
             LOG.debug('question_json: %s, question_html: %s' % (question_json, question_html))
  
             sql_list = []
- 
+
+            sql_list.append('UPDATE link_question_chapter SET chapter_id = %d WHERE question_id = %d' % (chapter_id, question_id)) # 生成更新章节关联信息的SQL
+
             if theme: # 主题
                 sql_list.append('DELETE FROM link_question_topic WHERE question_id=%d' % question_id) # 生成删除原有主题关联的SQL
                 for theme_id in theme.split(','): # 将传入的主题号按逗号切割
@@ -502,6 +509,7 @@ class update_exercises(web.RequestHandler):
                 mongo.insert_one(encode_html)
  
             for sql in sql_list:
+                LOG.info(sql)
                 mysql_cursor.execute(sql)
             mysql_handle.commit()
             mysql_cursor.close()
