@@ -87,8 +87,10 @@ class UploadQuestion(web.RequestHandler):
 
 			try:
 				question_json = urllib.unquote(question_json)
+				question_json = question_json.replace("'","\"")
 				encode_json = json.loads(question_json,encoding = 'utf-8')
 				question_html = urllib.unquote(question_html)
+				question_html = question_html.replace("'","\"")
 				encode_html = json.loads(question_html,encoding = 'utf-8')
 
 				if Base.empty(question_topic) and Base.empty(question_seriess):
@@ -400,12 +402,10 @@ class get_exercises(web.RequestHandler):
 
 
 class update_exercises(web.RequestHandler):
-
     def post(self):
-
         self.set_header("Access-Control-Allow-Origin", "*")
-
-        if set(self.request.arguments.keys()) != set(['id', 'json', 'html', 'topic', 'seriess', 'level', 'type', 'group', 'chapter']):
+        enter_func(self)
+        if not set(['id', 'json', 'html', 'topic', 'seriess', 'level', 'type', 'group', 'chapter']).issubset(self.request.arguments.keys()):
             LOG.error('invalid parameter keys: %s' % self.request.arguments.keys())
             return self.write(error_process(1))
 
@@ -419,20 +419,17 @@ class update_exercises(web.RequestHandler):
         question_json = self.request.arguments['json'][0]
         question_html = self.request.arguments['html'][0]
 
-        LOG.debug('question_id: %d, theme: %s, special: %s, level_id: %d, group_id: %d, chapter_id: %d, type_id: %d, question_json: %s, question_html: %s' % (question_id, theme, special, level_id, group_id, chapter_id, type_id, question_json, question_html))
-
         try:
-            if not (group_id and chapter_id and level_id and type_id and question_json and question_html and question_id and theme + special):
-                LOG.error('invalid parameters: %s' % self.request.arguments)
-                return self.write(error_process(1))
+            if not (chapter_id and level_id and type_id and question_json and question_html and question_id and theme + special):
+                return leave_func(self, 1)
  
             if Business.is_level(level_id) is False:
                 LOG.error('invalid level_id[%d]' % level_id)
-                return self.write(error_process(1))
+                return leave_func(self, 1)
  
             if Business.chapter_id_exist(chapter_id) is False:
                 LOG.error('invalid chapter_id[%d]' % chapter_id)
-                return self.write(error_process(1))
+                return leave_func(self, 1)
 
             try:
                 question_json = urllib.unquote(question_json)
@@ -444,7 +441,7 @@ class update_exercises(web.RequestHandler):
             except:
                 traceback.print_exc()
                 LOG.error(sys.exc_info())
-                return self.write(error_process(100))
+                return leave_func(self, 100)
  
             LOG.debug('question_json: %s, question_html: %s' % (question_json, question_html))
  
@@ -457,7 +454,7 @@ class update_exercises(web.RequestHandler):
                 for theme_id in theme.split(','): # 将传入的主题号按逗号切割
                     if Business.is_topic(theme_id) is False: # 判断主题号是否存在
                         LOG.error('invalid theme_id[%s]' % theme_id)
-                        return self.write(error_process(1))
+                        return leave_func(self, 1)
                     sql_list.append('INSERT INTO link_question_topic (question_id, topic_id) VALUES (%s, %s)' % (question_id, theme_id)) # 生成将新主题关联插库的SQL
  
             if special: # 专题
@@ -465,13 +462,13 @@ class update_exercises(web.RequestHandler):
                 for special_id in special.split(','): # 将传入的专题号按逗号切割
                     if Business.is_seriess(special_id) is False: # 判断专题号是否存在
                         LOG.error('invalid special_id[%s]' % special_id)
-                        return self.write(error_process(1))
+                        return leave_func(self, 1)
                     sql_list.append('INSERT INTO link_question_series (question_id, series_id) VALUES (%s, %s)' % (question_id, special_id)) # 生成将新专题关联插库的SQL
 
             question_type = Business.is_type(type_id)
             if question_type is False: # 判断题目类型是否存在
                 LOG.error('invalid type_id[%d]' % type_id)
-                return self.write(error_process(1))
+                return leave_func(self, 1)
             sql_list.append('UPDATE entity_question SET difficulty=%d, upload_time=now(), question_type="%s", question_group=%d WHERE id=%d' % (level_id, question_type, group_id, question_id)) # 生成更新题目属性的SQL
  
             mysql_handle = Mysql().get_handle()
@@ -480,7 +477,7 @@ class update_exercises(web.RequestHandler):
             result = mysql_cursor.fetchall()
             if not result:
                 LOG.error('invalid question_id[%d]' % question_id)
-                return self.write(error_process(1))
+                return leave_func(self, 1)
 
             qiniu = QiniuWrap()
             mongo = Mongo()
@@ -514,14 +511,15 @@ class update_exercises(web.RequestHandler):
             mysql_handle.commit()
             mysql_cursor.close()
             mysql_handle.close()
- 
+
+            leave_func(self, 0)
             self.write(error_process(0))
 #        except MySQLdb.Error, e:
 #            LOG.error(e)
 #            return self.write(error_process(100))
         except Exception, e:
             LOG.error(e)
-            return self.write(error_process(100))
+            return leave_func(self, 100)
 
 
 class delete_exercises(web.RequestHandler):
@@ -543,14 +541,14 @@ class delete_exercises(web.RequestHandler):
 
 
 def enter_func(self):
-    LOG.debug('enter %s(%s) ...' % (self.__class__.__name__, json.dumps(self.request.arguments, ensure_ascii=False)))
+    LOG.debug('%s(%s) ...' % (self.__class__.__name__, json.dumps(self.request.arguments, ensure_ascii=False)))
 
 
 def leave_func(self, code):
     if 0 == code:
-        LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, json.dumps(self.request.arguments, ensure_ascii=False)))
+        LOG.debug('%s(%s) ...' % (self.__class__.__name__, json.dumps(self.request.arguments, ensure_ascii=False)))
     else:
-        LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, json.dumps(self.request.arguments, ensure_ascii=False), error_process(code)))
+        LOG.debug('%s(%s) %s' % (self.__class__.__name__, json.dumps(self.request.arguments, ensure_ascii=False), error_process(code)))
         self.write(error_process(code))
 
 
