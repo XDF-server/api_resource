@@ -469,7 +469,7 @@ class update_exercises(web.RequestHandler):
             if question_type is False: # 判断题目类型是否存在
                 LOG.error('invalid type_id[%d]' % type_id)
                 return leave_func(self, 1)
-            sql_list.append('UPDATE entity_question SET difficulty=%d, upload_time=now(), question_type="%s", question_group=%d WHERE id=%d' % (level_id, question_type, group_id, question_id)) # 生成更新题目属性的SQL
+            sql_list.append('UPDATE entity_question SET difficulty=%d, update_time=now(), question_type="%s", question_group=%d WHERE id=%d' % (level_id, question_type, group_id, question_id)) # 生成更新题目属性的SQL
  
             mysql_handle = Mysql().get_handle()
             mysql_cursor = mysql_handle.cursor(MySQLdb.cursors.DictCursor)
