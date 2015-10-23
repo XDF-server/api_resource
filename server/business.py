@@ -1,6 +1,8 @@
 # *-* coding:utf-8 *-*
 
+
 from base import Base
+from collections import OrderedDict
 from mysql import Mysql
 from gl import LOG
 from exception import DBException,CKException
@@ -19,10 +21,10 @@ class Business(object):
 		
 		query_sql = "select A.id,count(1) from entity_group A,entity_question B where (A.system_id=%(system_id)d or A.id=0) and A.enable=1 and B.upload_id=%(system_id)d and A.id=B.question_group group by B.question_group;" 
 		
-		group_sql = "select id,name from entity_group where (system_id=%(system_id)d or id=0);"
+		group_sql = "select id,name from entity_group where (system_id=%(system_id)d or id=0) order by create_time desc;"
 		
 		try:
-			group_dict = {}
+			group_dict = OrderedDict()
 			group_list = []
 			default_num = 0
 
