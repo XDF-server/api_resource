@@ -99,12 +99,6 @@ class UploadQuestion(web.RequestHandler):
 					LOG.error('ERR[topic and seriess empty]') 
 					break
 
-				if Base.empty(question_topic) and Base.empty(question_seriess) and Base.empty(question_chapter):
-					ret['code'] = 1
-					ret['message'] = 'invalid parameters'
-					LOG.error('ERR[topic and seriess empty]') 
-					break
-
 				if Base.empty(question_group):
 					ret['code'] = 1
 					ret['message'] = 'invalid parameters'
@@ -139,11 +133,12 @@ class UploadQuestion(web.RequestHandler):
 					LOG.error('ERR[type is invalid]') 
 					break
 
-				if Business.chapter_id_exist(question_chapter) is False:
-					ret['code'] = 1
-					ret['message'] = 'invalid parameters'
-					LOG.error('ERR[seriess %s invalid]' % question_theme) 
-					break
+				if not Base.empty(question_chapter):
+					if Business.chapter_id_exist(question_chapter) is False:
+						ret['code'] = 1
+						ret['message'] = 'invalid parameters'
+						LOG.error('ERR[seriess %s invalid]' % question_theme) 
+						break
 
 			except (ValueError,KeyError,TypeError):
 				ret['code'] = 1
