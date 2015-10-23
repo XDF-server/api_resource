@@ -20,7 +20,7 @@ if __name__ == "__main__":
 	from gl import LOG
 	from question import *
 	from transcode import Transcode,TranscodeRes
-	from group import CreateGroup,GetGroupList,UpdateGroup,DeleteGroup
+	from group import CreateGroup,GetGroupList,UpdateGroup,DeleteGroup,TransferGroup
 	from approve import UpToken
 	
 	tornado.options.parse_command_line()
@@ -40,7 +40,7 @@ if __name__ == "__main__":
 		(r'/api/get_group_list',GetGroupList),
 		(r'/api/update_group',UpdateGroup),
 		(r'/api/delete_group',DeleteGroup),
-		(r'/api/transfer_group',DeleteGroup),
+		(r'/api/transfer_group',TransferGroup),
 		(r'/api/uptoken',UpToken),
 		(r'/api/transcode',Transcode),
 		(r'/api/transcode_res',TranscodeRes),

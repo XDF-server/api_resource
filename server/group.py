@@ -508,8 +508,8 @@ class TransferGroup(web.RequestHandler):
                                 LOG.error('ERROR[in parameter invalid]')
                                 break
                             
-                        question_id = int(''.join(self.request.arguments['question_id']))
-			group_id = int(''.join(self.request.arguments['group_id']))
+                        question_id = ''.join(self.request.arguments['question_id'])
+			group_id = ''.join(self.request.arguments['group_id'])
 
                         if Base.empty(question_id) or Base.empty(group_id):
                                 ret['code'] = 1 
