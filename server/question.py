@@ -415,16 +415,16 @@ class update_exercises(web.RequestHandler):
         question_html = self.request.arguments['html'][0]
 
         try:
-            if not (chapter_id and level_id and type_id and question_json and question_html and question_id and theme + special):
+            if not (level_id and type_id and question_json and question_html and question_id and theme + special):
                 return leave_func(self, 1)
- 
+
             if Business.is_level(level_id) is False:
                 LOG.error('invalid level_id[%d]' % level_id)
                 return leave_func(self, 1)
- 
-            if Business.chapter_id_exist(chapter_id) is False:
-                LOG.error('invalid chapter_id[%d]' % chapter_id)
-                return leave_func(self, 1)
+
+#            if Business.chapter_id_exist(chapter_id) is False:
+#                LOG.error('invalid chapter_id[%d]' % chapter_id)
+#                return leave_func(self, 1)
 
             try:
                 question_json = urllib.unquote(question_json)
@@ -437,9 +437,9 @@ class update_exercises(web.RequestHandler):
                 traceback.print_exc()
                 LOG.error(sys.exc_info())
                 return leave_func(self, 100)
- 
+
             LOG.debug('question_json: %s, question_html: %s' % (question_json, question_html))
- 
+
             sql_list = []
 
             sql_list.append('UPDATE link_question_chapter SET chapter_id = %d WHERE question_id = %d' % (chapter_id, question_id)) # 生成更新章节关联信息的SQL
@@ -451,7 +451,7 @@ class update_exercises(web.RequestHandler):
                         LOG.error('invalid theme_id[%s]' % theme_id)
                         return leave_func(self, 1)
                     sql_list.append('INSERT INTO link_question_topic (question_id, topic_id) VALUES (%s, %s)' % (question_id, theme_id)) # 生成将新主题关联插库的SQL
- 
+
             if special: # 专题
                 sql_list.append('DELETE FROM link_question_series WHERE question_id=%d' % question_id) # 生成删除原有专题关联的SQL
                 for special_id in special.split(','): # 将传入的专题号按逗号切割
@@ -465,7 +465,7 @@ class update_exercises(web.RequestHandler):
                 LOG.error('invalid type_id[%d]' % type_id)
                 return leave_func(self, 1)
             sql_list.append('UPDATE entity_question SET difficulty=%d, update_time=now(), question_type="%s", question_group=%d WHERE id=%d' % (level_id, question_type, group_id, question_id)) # 生成更新题目属性的SQL
- 
+
             mysql_handle = Mysql().get_handle()
             mysql_cursor = mysql_handle.cursor(MySQLdb.cursors.DictCursor)
             mysql_cursor.execute('SELECT question_docx, html FROM entity_question WHERE id=%d' % question_id) # 通过题目ID查询存储的json/html文件名
@@ -499,7 +499,7 @@ class update_exercises(web.RequestHandler):
                 mongo.remove( { "question_id" : question_id } )
                 encode_html['question_id'] = question_id
                 mongo.insert_one(encode_html)
- 
+
             for sql in sql_list:
                 LOG.info(sql)
                 mysql_cursor.execute(sql)
