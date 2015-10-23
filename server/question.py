@@ -93,6 +93,16 @@ class UploadQuestion(web.RequestHandler):
 				question_html = question_html.replace("'","\"")
 				encode_html = json.loads(question_html,encoding = 'utf-8')
 
+				answer_num = 0
+	
+				#选择题
+				if question_type == 1:
+				    answer_num = len(encode_json['answer'])
+
+				#填空题               
+				if question_type == 2:
+				    answer_num = max([group['index'] for group in encode_json['answer']])
+
 				if Base.empty(question_topic) and Base.empty(question_seriess):
 					ret['code'] = 1
 					ret['message'] = 'invalid parameters'
