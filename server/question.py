@@ -415,7 +415,7 @@ class get_exercises(web.RequestHandler):
             cursor.close()
             mysql.close()
 
-            LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+            leave_func(self, 0)
             return self.write(json.dumps(result, ensure_ascii=False))
         except Exception, e:
             LOG.error(e)
@@ -443,7 +443,7 @@ class update_exercises(web.RequestHandler):
         question_html = self.request.arguments['html'][0]
 
         try:
-            if not (type_id.isdigit() and int(type_id) and level_id.isdigit() and int(level_id) and group_id.isdigit() and int(group_id) and question_id.isdigit() and int(question_id) and theme + chapter_id and question_json and question_html):
+            if not (type_id.isdigit() and int(type_id) and level_id.isdigit() and int(level_id) and group_id.isdigit() and question_id.isdigit() and int(question_id) and theme + chapter_id and question_json and question_html):
                 return leave_func(self, 1)
 
             if Business.is_level(level_id) is False:
