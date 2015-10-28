@@ -1,4 +1,4 @@
-# *-* coding:utf-8 *-*
+# *-*coding:utf8*-*
 
 import json
 import time
@@ -62,7 +62,7 @@ class UploadQuestion(web.RequestHandler):
 			
 			ret = {'code':'','message':''}
 
-			essential_keys = set(['json','html','topic','seriess','level','type','group','chapter'])
+			essential_keys = set(['json','html','topic','level','type','group','chapter'])
 
 			if Base.check_parameter(set(self.request.arguments.keys()),essential_keys):
 				ret['code'] = 1
@@ -73,7 +73,6 @@ class UploadQuestion(web.RequestHandler):
 			question_json = ''.join(self.request.arguments['json'])
 			question_html = ''.join(self.request.arguments['html'])
 			question_topic = ''.join(self.request.arguments['topic'])
-			question_seriess = ''.join(self.request.arguments['seriess'])
 			question_level = ''.join(self.request.arguments['level'])
 			question_type = ''.join(self.request.arguments['type'])
 			question_group = ''.join(self.request.arguments['group'])
@@ -94,19 +93,11 @@ class UploadQuestion(web.RequestHandler):
 				encode_html = json.loads(question_html,encoding = 'utf-8')
 
 				answer_num = 0
-	
-				#选择题
-				if question_type == 1:
-				    answer_num = len(encode_json['answer'])
-
-				#填空题               
-				if question_type == 2:
-				    answer_num = max([group['index'] for group in encode_json['answer']])
-
-				if Base.empty(question_topic) and Base.empty(question_seriess):
+				
+				if Base.empty(question_topic) and Base.empty(question_chapter):
 					ret['code'] = 1
 					ret['message'] = 'invalid parameters'
-					LOG.error('ERR[topic and seriess empty]') 
+					LOG.error('ERR[topic and chapter empty]') 
 					break
 
 				if Base.empty(question_group):
@@ -125,16 +116,6 @@ class UploadQuestion(web.RequestHandler):
 							LOG.error('ERR[topic %s invalid]' % question_theme) 
 							break
 
-				if Base.empty(question_seriess) is False:
-					seriess_list = question_seriess.split(',')
-
-					for question_special in seriess_list:
-						if Business.is_seriess(question_special) is False:
-							ret['code'] = 1
-							ret['message'] = 'invalid parameters'
-							LOG.error('ERR[seriess %s invalid]' % question_theme) 
-							break
-
 				type_name =  Business.is_type(question_type)
 
 				if type_name is False:
@@ -142,6 +123,16 @@ class UploadQuestion(web.RequestHandler):
 					ret['message'] = 'invalid parameters'
 					LOG.error('ERR[type is invalid]') 
 					break
+
+				if type_name == '选择题'.decode('utf-8'):
+					if 'answer' in encode_json.keys():
+						print encode_json['answer']
+				    		answer_num = len(encode_json['answer'])
+
+				if type_name == '填空题'.decode('utf-8'):
+					if 'answer' in encode_json.keys():
+						print encode_json['answer']
+				    		answer_num = max([group['index'] for group in encode_json['answer']])
 
 				if not Base.empty(question_chapter):
 					if Business.chapter_id_exist(question_chapter) is False:
@@ -162,7 +153,7 @@ class UploadQuestion(web.RequestHandler):
 				LOG.error('ERR[mysql exception]') 
 				break
 
-			key = question_topic + question_seriess + question_level + question_type + question_group
+			key = question_topic + question_level + question_type + question_group
 			secret_key = hashlib.sha1(key).hexdigest()
 
 			qiniu = QiniuWrap()
@@ -234,8 +225,6 @@ class UploadQuestion(web.RequestHandler):
 					
 					link_topic_sql = "insert into link_question_topic (question_id,topic_id) values (%(q_id)d,%(t_id)d);"
 
-					link_series_sql = "insert into link_question_series (question_id,series_id) values (%(q_id)d,%(s_id)d);"
-
 					link_chapter_sql = "insert into link_question_chapter (question_id,chapter_id) values (%(q_id)d,%(c_id)d);"
 
 					try:
@@ -254,22 +243,16 @@ class UploadQuestion(web.RequestHandler):
 								topic_sql = db.get_last_sql()
 								topic_id = db.get_last_id()
 								LOG.info('RES[%s] - INS[%d]' % (topic_res,topic_id))
-						if Base.empty(question_seriess) is False:
-							seriess_list = question_seriess.split(',')
 
-							for question_special in seriess_list:
-								series_res = db.exec_event(link_series_sql,q_id = int(question_id),s_id = int(question_special))
-								series_sql = db.get_last_sql()
-								series_id = db.get_last_id()
-								LOG.info('RES[%s] - INS[%d]' % (series_res,series_id))
-
-						chapter_res = db.exec_event(link_chapter_sql,q_id = int(question_id),c_id = int(question_chapter))
-						chapter_sql = db.get_last_sql()
-						chapter_id = db.get_last_id()
-						LOG.info('RES[%s] - INS[%d]' % (chapter_res,chapter_id))
+						if not Base.empty(question_chapter):
+							chapter_res = db.exec_event(link_chapter_sql,q_id = int(question_id),c_id = int(question_chapter))
+							chapter_sql = db.get_last_sql()
+							chapter_id = db.get_last_id()
+							LOG.info('RES[%s] - INS[%d]' % (chapter_res,chapter_id))
 						
 					except DBException as e:
 						db.rollback()
+						db.end_event()
 						ret['code'] = 3
 						ret['message'] = 'server error'
 						LOG.error('ERR[insert mysql error]') 
@@ -294,6 +277,8 @@ class UploadQuestion(web.RequestHandler):
 				LOG.info('MONGO[insert html] - DATA[%s] - INS[%s]' % (json.dumps(encode_html),html_id))
 
 			except DBException as e:
+				db.rollback()
+				db.end_event()
 				ret['code'] = 3 
 				ret['message'] = 'server error'
 				LOG.error('ERR[mongo exception]') 
@@ -312,84 +297,119 @@ class UploadQuestion(web.RequestHandler):
 
 
 class get_exercises(web.RequestHandler):
+
     def get(self):
-        LOG.debug('enter %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
+
         self.set_header("Access-Control-Allow-Origin", "*")
+        enter_func(self)
+
         if not set(['id']).issubset(self.request.arguments.keys()):
-            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(1)))
-            return self.write(error_process(1))
-        topic_id = int(self.request.arguments['id'][0])
+            return leave_func(self, 1)
+        question_id = self.request.arguments['id'][0]
+        if not question_id.isdigit():
+            return leave_func(self, 1)
 
         try:
             mysql = Mysql().get_handle()
             cursor = mysql.cursor(MySQLdb.cursors.DictCursor)
-            sql = 'SELECT question_type, subject_id, difficulty, question_group FROM entity_question WHERE id = %d' % topic_id
+            sql = 'SELECT question_type, subject_id, difficulty, question_group FROM entity_question WHERE id = %s' % question_id
             LOG.info('mysql> %s' % sql)
             cursor.execute(sql)
             result = cursor.fetchall()
-            if not result and 1 != len(result):
-                LOG.error('topic_id[%d] nonexistent or abnormal.' % topic_id)
-                LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(2)))
-                return self.write(error_process(2))
-            level_id   = result[0]['difficulty']
-            group_id   = result[0]['question_group']
-            topic_type = result[0]['question_type']
-            subject_id = result[0]['subject_id']
+            if not result:
+                LOG.error('question_id[%s] nonexistent!' % question_id)
+                return leave_func(self, 2)
+            level_id      = result[0]['difficulty']
+            group_id      = result[0]['question_group']
+            question_type = result[0]['question_type']
+            subject_id    = result[0]['subject_id']
 
             # 获取题目类型
-            sql = 'SELECT type_id id, name FROM entity_question_type WHERE name = "%s"' % topic_type
+            sql = 'SELECT type_id id, name FROM entity_question_type WHERE name = "%s"' % question_type
             LOG.info('mysql> %s' % sql)
             cursor.execute(sql)
-            topic_type = cursor.fetchall()
-            if not topic_type and 1 != len(topic_type):
-                LOG.error('topic_type[%s] of topic_id[%d] nonexistent or abnormal.' % (topic_type, topic_id))
-                LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments), error_process(2))
-                return self.write(error_process(2))
-#            print 'topic_type: %s' % topic_type
+            ret = cursor.fetchall()
+            if not ret:
+                LOG.error('invalid question_type[%s] of question_id[%s]!' % (question_type, question_id))
+                return leave_func(self, 100)
+            question_type = ret[0]
 
             # 获取主题
-            sql = 'select id, substring_index(name, "\n", 1) name from entity_topic where id in (select topic_id from link_question_topic where question_id = %d)' % topic_id
+            sql = 'select id, substring_index(name, "\n", 1) name from entity_topic where id in (select question_id from link_question_topic where question_id = %s)' % question_id
             LOG.info('mysql> %s' % repr(sql)[1:-1])
             cursor.execute(sql)
             theme_list = list(cursor.fetchall())
-#            print 'theme: %s' % theme_list
 
             # 获取专题
-            sql = 'select id, substring_index(name, "\n", 1) name from entity_seriess where id in (select series_id from link_question_series where question_id = %d)' % topic_id
+            sql = 'select id, substring_index(name, "\n", 1) name from entity_seriess where id in (select series_id from link_question_series where question_id = %s)' % question_id
             LOG.info('mysql> %s' % repr(sql)[1:-1])
             cursor.execute(sql)
             special_list = list(cursor.fetchall())
-#            print 'special: %s' % special_list
 
             mongo = Mongo().get_handle()
-            json_body = mongo.resource.mongo_question_json.find_one( { 'question_id' : topic_id } )
+            json_body = mongo.resource.mongo_question_json.find_one( { 'question_id': int(question_id) } )
             if not json_body:
-                LOG.error('json body of question_id[%d] is nonexistent in MongoDB.' % topic_id)
-                LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(2)))
-                return self.write(error_process(2))
+                LOG.error('json body of question_id[%s] is nonexistent in MongoDB.' % question_id)
+                return leave_func(self, 2)
             if 'content' in json_body:
                 json_body = json_body['content']
             else:
                 json_body = {}
 
-            html_body = mongo.resource.mongo_question_html.find_one( { 'question_id' : topic_id } )
+            html_body = mongo.resource.mongo_question_html.find_one( { 'question_id': int(question_id) } )
             if not html_body:
-                LOG.error('html body of question_id[%d] is nonexistent in MongoDB.' % topic_id)
-                LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(2)))
-                return self.write(error_process(2))
+                LOG.error('html body of question_id[%s] is nonexistent in MongoDB.' % question_id)
+                return leave_func(self, 2)
             if 'content' in html_body:
                 html_body = html_body['content']
             else:
                 html_body = {}
 
-            result            = error_process(0)
-            result['json']    = json_body
-            result['html']    = html_body
-            result['type']    = topic_type[0]
-            result['topic']   = theme_list
-            result['level']   = level_id
-            result['group']   = group_id
-            result['seriess'] = special_list
+            chapter_info = {}
+
+            sql = 'SELECT chapter_id FROM link_question_chapter WHERE question_id = %s' % question_id
+            LOG.info('mysql> %s' % sql)
+            cursor.execute(sql)
+            ret = cursor.fetchall()
+            if ret:
+                chapter_id = ret[0]['chapter_id']
+
+                sql = 'SELECT id, level, parent_id, replace(prefix_name, "\r\n", "") AS prefix_name, replace(name, "\r\n", "") AS name FROM entity_teaching_chapter WHERE id = %s' % chapter_id
+                LOG.info('mysql> %s' % repr(sql)[1:-1])
+                cursor.execute(sql)
+                ret = cursor.fetchall()
+                if not ret:
+                    LOG.error('chapter_id[%s] nonexistent!' % chapter_id)
+                else:
+                    chapter_id  = ret[0]['id']
+                    parent_id   = ret[0]['parent_id']
+                    prefix_name = ret[0]['prefix_name']
+                    name        = ret[0]['name']
+                    level       = ret[0]['level']
+                    chapter_info[level] = { 'id': chapter_id, 'prefix': prefix_name, 'name': name }
+
+                    for i in range(int(level) - 1):
+                        sql = 'SELECT id, level, parent_id, replace(prefix_name, "\r\n", "") AS prefix_name, replace(name, "\r\n", "") AS name FROM entity_teaching_chapter WHERE id = %s' % parent_id
+                        LOG.info('mysql> %s' % repr(sql)[1:-1])
+                        cursor.execute(sql)
+                        ret = cursor.fetchall()
+                        if not ret:
+                            break
+                        chapter_id  = ret[0]['id']
+                        parent_id   = ret[0]['parent_id']
+                        prefix_name = ret[0]['prefix_name']
+                        name        = ret[0]['name']
+                        level       = ret[0]['level']
+                        chapter_info[level] = { 'id': chapter_id, 'prefix': prefix_name, 'name': name }
+
+            result          = error_process(0)
+            result['json']  = json_body
+            result['html']  = html_body
+            result['type']  = question_type
+            result['topic'] = theme_list
+            result['level'] = level_id
+            result['group'] = group_id
+            result['chapter_info'] = chapter_info
 
             mongo.close()
             cursor.close()
@@ -397,39 +417,37 @@ class get_exercises(web.RequestHandler):
 
             LOG.debug('leave %s(%s) ...' % (self.__class__.__name__, self.request.arguments))
             return self.write(json.dumps(result, ensure_ascii=False))
-#        except MySQLdb.Error, e:
-#            LOG.error(e)
-#            return self.write(error_process(100))
         except Exception, e:
             LOG.error(e)
-            LOG.debug('leave %s(%s) %s' % (self.__class__.__name__, self.request.arguments, error_process(100)))
-            return self.write(error_process(100))
+            return leave_func(self, 100)
 
 
 class update_exercises(web.RequestHandler):
+
     def post(self):
+
         self.set_header("Access-Control-Allow-Origin", "*")
+
         enter_func(self)
-        if not set(['id', 'json', 'html', 'topic', 'seriess', 'level', 'type', 'group', 'chapter']).issubset(self.request.arguments.keys()):
-            LOG.error('invalid parameter keys: %s' % self.request.arguments.keys())
-            return self.write(error_process(1))
+
+        if not set(['id', 'json', 'html', 'topic', 'level', 'type', 'group', 'chapter']).issubset(self.request.arguments.keys()):
+            return leave_func(self, 1)
 
         theme         = self.request.arguments['topic'][0]
-        special       = self.request.arguments['seriess'][0]
-        type_id       = int(self.request.arguments['type'][0])
-        level_id      = int(self.request.arguments['level'][0])
-        group_id      = int(self.request.arguments['group'][0])
-        chapter_id    = int(self.request.arguments['chapter'][0])
-        question_id   = int(self.request.arguments['id'][0])
+        type_id       = self.request.arguments['type'][0]
+        level_id      = self.request.arguments['level'][0]
+        group_id      = self.request.arguments['group'][0]
+        chapter_id    = self.request.arguments['chapter'][0]
+        question_id   = self.request.arguments['id'][0]
         question_json = self.request.arguments['json'][0]
         question_html = self.request.arguments['html'][0]
 
         try:
-            if not (level_id and type_id and question_json and question_html and question_id and theme + special):
+            if not (type_id.isdigit() and int(type_id) and level_id.isdigit() and int(level_id) and group_id.isdigit() and int(group_id) and question_id.isdigit() and int(question_id) and theme + chapter_id and question_json and question_html):
                 return leave_func(self, 1)
 
             if Business.is_level(level_id) is False:
-                LOG.error('invalid level_id[%d]' % level_id)
+                LOG.error('invalid level_id[%s]' % level_id)
                 return leave_func(self, 1)
 
 #            if Business.chapter_id_exist(chapter_id) is False:
@@ -451,37 +469,37 @@ class update_exercises(web.RequestHandler):
             LOG.debug('question_json: %s, question_html: %s' % (question_json, question_html))
 
             sql_list = []
-
-            sql_list.append('UPDATE link_question_chapter SET chapter_id = %d WHERE question_id = %d' % (chapter_id, question_id)) # 生成更新章节关联信息的SQL
+            if chapter_id:
+                sql_list.append('UPDATE link_question_chapter SET chapter_id = %s WHERE question_id = %s' % (chapter_id, question_id)) # 生成更新章节关联信息的SQL
 
             if theme: # 主题
-                sql_list.append('DELETE FROM link_question_topic WHERE question_id=%d' % question_id) # 生成删除原有主题关联的SQL
+                sql_list.append('DELETE FROM link_question_topic WHERE question_id = %s' % question_id) # 生成删除原有主题关联的SQL
                 for theme_id in theme.split(','): # 将传入的主题号按逗号切割
                     if Business.is_topic(theme_id) is False: # 判断主题号是否存在
                         LOG.error('invalid theme_id[%s]' % theme_id)
                         return leave_func(self, 1)
                     sql_list.append('INSERT INTO link_question_topic (question_id, topic_id) VALUES (%s, %s)' % (question_id, theme_id)) # 生成将新主题关联插库的SQL
 
-            if special: # 专题
-                sql_list.append('DELETE FROM link_question_series WHERE question_id=%d' % question_id) # 生成删除原有专题关联的SQL
-                for special_id in special.split(','): # 将传入的专题号按逗号切割
-                    if Business.is_seriess(special_id) is False: # 判断专题号是否存在
-                        LOG.error('invalid special_id[%s]' % special_id)
-                        return leave_func(self, 1)
-                    sql_list.append('INSERT INTO link_question_series (question_id, series_id) VALUES (%s, %s)' % (question_id, special_id)) # 生成将新专题关联插库的SQL
+#            if special: # 专题
+#                sql_list.append('DELETE FROM link_question_series WHERE question_id = %s' % question_id) # 生成删除原有专题关联的SQL
+#                for special_id in special.split(','): # 将传入的专题号按逗号切割
+#                    if Business.is_seriess(special_id) is False: # 判断专题号是否存在
+#                        LOG.error('invalid special_id[%s]' % special_id)
+#                        return leave_func(self, 1)
+#                    sql_list.append('INSERT INTO link_question_series (question_id, series_id) VALUES (%s, %s)' % (question_id, special_id)) # 生成将新专题关联插库的SQL
 
             question_type = Business.is_type(type_id)
             if question_type is False: # 判断题目类型是否存在
-                LOG.error('invalid type_id[%d]' % type_id)
+                LOG.error('invalid type_id[%s]' % type_id)
                 return leave_func(self, 1)
-            sql_list.append('UPDATE entity_question SET difficulty=%d, update_time=now(), question_type="%s", question_group=%d WHERE id=%d' % (level_id, question_type, group_id, question_id)) # 生成更新题目属性的SQL
+            sql_list.append('UPDATE entity_question SET difficulty = %s, update_time = now(), question_type = "%s", question_group = %s WHERE id = %s' % (level_id, question_type, group_id, question_id)) # 生成更新题目属性的SQL
 
             mysql_handle = Mysql().get_handle()
             mysql_cursor = mysql_handle.cursor(MySQLdb.cursors.DictCursor)
-            mysql_cursor.execute('SELECT question_docx, html FROM entity_question WHERE id=%d' % question_id) # 通过题目ID查询存储的json/html文件名
+            mysql_cursor.execute('SELECT question_docx, html FROM entity_question WHERE id = %s' % question_id) # 通过题目ID查询存储的json/html文件名
             result = mysql_cursor.fetchall()
             if not result:
-                LOG.error('invalid question_id[%d]' % question_id)
+                LOG.error('invalid question_id[%s]' % question_id)
                 return leave_func(self, 1)
 
             qiniu = QiniuWrap()
@@ -519,9 +537,6 @@ class update_exercises(web.RequestHandler):
 
             leave_func(self, 0)
             self.write(error_process(0))
-#        except MySQLdb.Error, e:
-#            LOG.error(e)
-#            return self.write(error_process(100))
         except Exception, e:
             LOG.error(e)
             return leave_func(self, 100)

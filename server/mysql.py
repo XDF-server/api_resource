@@ -49,6 +49,8 @@ class Mysql(object):
 					connect_timeout = int(timeout))
 			
 			self.cur = self.conn.cursor()
+			self.query('set autocommit=1;')
+
 			self.connect_flag = True
 
 		except MySQLdb.Error,e:
@@ -61,7 +63,6 @@ class Mysql(object):
 		self.query('set autocommit=0;')
 		self.query('begin;')
 		self.event_flag = True
-		LOG.info(dir(self.conn))
 
 	def exec_event(self,sql,**kwds):
 
@@ -97,6 +98,10 @@ class Mysql(object):
 		self.conn.rollback()
 
 	def query(self,sql,**kwds):
+
+		self.cur.execute("show variables like 'autocommit';")
+		flag = self.cur.fetchone()
+		LOG.info(flag)
 		
 		try:
 			self.sql = sql % kwds

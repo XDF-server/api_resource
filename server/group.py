@@ -459,18 +459,23 @@ class DeleteGroup(web.RequestHandler):
 
 					except DBException as e:
 						db.rollback()
+						db.end_event()
 						ret['code'] = 3
 						ret['message'] = 'server error'
 						LOG.error('ERROR[mysql error]')
 						break
 
 				else:
+					db.rollback()
+					db.end(event)
 					ret['code'] = 3 
 					ret['message'] = 'server error'
 					LOG.error('ERROR[remote error]')
 					break
 
 			else:
+				db.rollback()
+				db.end(event)
 				ret['code'] = 3 
 				ret['message'] = 'server error'
 				LOG.error('ERROR[remote error]')
@@ -565,7 +570,12 @@ class TransferGroup(web.RequestHandler):
 
                                                 question_res = db.query(question_sql,question_id = int(question_id),system_id
 = int(system_id),group_id=int(group_id))                                   
-                                                
+                                                if not question_res:
+							ret['code'] = 3
+							ret['message'] = 'server error'
+							LOG.error('ERROR[mysql error]')
+							break
+	
 						question_sql = db.get_last_sql()
                                                 LOG.info('SQL[%s] - RES[%s]' % (question_sql,question_res))
 
