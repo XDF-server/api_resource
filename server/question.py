@@ -335,16 +335,16 @@ class get_exercises(web.RequestHandler):
             question_type = ret[0]
 
             # 获取主题
-            sql = 'select id, substring_index(name, "\n", 1) name from entity_topic where id in (select question_id from link_question_topic where question_id = %s)' % question_id
+            sql = 'SELECT id, SUBSTRING_INDEX(name, "\n", 1) name FROM entity_topic WHERE id IN (SELECT topic_id FROM link_question_topic WHERE question_id = %s)' % question_id
             LOG.info('mysql> %s' % repr(sql)[1:-1])
             cursor.execute(sql)
             theme_list = list(cursor.fetchall())
 
-            # 获取专题
-            sql = 'select id, substring_index(name, "\n", 1) name from entity_seriess where id in (select series_id from link_question_series where question_id = %s)' % question_id
-            LOG.info('mysql> %s' % repr(sql)[1:-1])
-            cursor.execute(sql)
-            special_list = list(cursor.fetchall())
+#            # 获取专题
+#            sql = 'select id, substring_index(name, "\n", 1) name from entity_seriess where id in (select series_id from link_question_series where question_id = %s)' % question_id
+#            LOG.info('mysql> %s' % repr(sql)[1:-1])
+#            cursor.execute(sql)
+#            special_list = list(cursor.fetchall())
 
             mongo = Mongo().get_handle()
             json_body = mongo.resource.mongo_question_json.find_one( { 'question_id': int(question_id) } )
@@ -466,8 +466,6 @@ class update_exercises(web.RequestHandler):
                 LOG.error(sys.exc_info())
                 return leave_func(self, 100)
 
-            LOG.debug('question_json: %s, question_html: %s' % (question_json, question_html))
-
             sql_list = []
             if chapter_id:
                 sql_list.append('UPDATE link_question_chapter SET chapter_id = %s WHERE question_id = %s' % (chapter_id, question_id)) # 生成更新章节关联信息的SQL
@@ -479,14 +477,6 @@ class update_exercises(web.RequestHandler):
                         LOG.error('invalid theme_id[%s]' % theme_id)
                         return leave_func(self, 1)
                     sql_list.append('INSERT INTO link_question_topic (question_id, topic_id) VALUES (%s, %s)' % (question_id, theme_id)) # 生成将新主题关联插库的SQL
-
-#            if special: # 专题
-#                sql_list.append('DELETE FROM link_question_series WHERE question_id = %s' % question_id) # 生成删除原有专题关联的SQL
-#                for special_id in special.split(','): # 将传入的专题号按逗号切割
-#                    if Business.is_seriess(special_id) is False: # 判断专题号是否存在
-#                        LOG.error('invalid special_id[%s]' % special_id)
-#                        return leave_func(self, 1)
-#                    sql_list.append('INSERT INTO link_question_series (question_id, series_id) VALUES (%s, %s)' % (question_id, special_id)) # 生成将新专题关联插库的SQL
 
             question_type = Business.is_type(type_id)
             if question_type is False: # 判断题目类型是否存在
@@ -513,8 +503,10 @@ class update_exercises(web.RequestHandler):
                 qiniu.upload_data("temp", json_name, question_json)
                 # 将MongoDB中的json文件删除后重新上传
                 mongo.select_collection('mongo_question_json')
-                mongo.remove( { "question_id" : question_id } )
-                encode_json['question_id'] = question_id
+                LOG.debug('resource.mongo_question_json.remove( { question_id: %s } )' % question_id)
+                mongo.remove( { "question_id" : int(question_id) } )
+                encode_json['question_id'] = int(question_id)
+                LOG.debug('resource.mongo_question_json.insert_one( %s )' % encode_json)
                 mongo.insert_one(encode_json)
 
             if result[0]['html'] and '.html' in result[0]['html']:
@@ -524,8 +516,10 @@ class update_exercises(web.RequestHandler):
                 qiniu.upload_data("temp", html_name, question_html)
                 # 将MongoDB中的html文件删除后重新上传
                 mongo.select_collection('mongo_question_html')
-                mongo.remove( { "question_id" : question_id } )
-                encode_html['question_id'] = question_id
+                LOG.debug('resource.mongo_question_html.remove( { question_id: %s } )' % question_id)
+                mongo.remove( { "question_id" : int(question_id) } )
+                encode_html['question_id'] = int(question_id)
+                LOG.debug('resource.mongo_question_html.insert_one( %s )' % encode_html)
                 mongo.insert_one(encode_html)
 
             for sql in sql_list:
