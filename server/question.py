@@ -221,7 +221,7 @@ class UploadQuestion(web.RequestHandler):
 
 					db = Mysql()
 
-					question_sql = "insert into entity_question (difficulty,question_docx,html,upload_time,question_type,subject_id,new_format,upload_id,upload_src,question_group,grade_id,state,is_single,question_typeid,answer_num) values (%(level)d,'%(json)s','%(html)s',now(),'%(type)s',%(subject_id)d,1,%(upload_id)d,%(upload_src)d,%(question_group)d,%(grade_id)d,'RAW',1,%(question_typeid)d,%(answer_num)d);"
+					question_sql = "insert into entity_question (difficulty,question_docx,html,upload_time,question_type,subject_id,new_format,upload_id,upload_src,question_group,grade_id,state,is_single,question_typeid,answer_num,count_ref,paper_year) values (%(level)d,'%(json)s','%(html)s',now(),'%(type)s',%(subject_id)d,1,%(upload_id)d,%(upload_src)d,%(question_group)d,%(grade_id)d,'RAW',1,%(question_typeid)d,%(answer_num)d,0,0);"
 					
 					link_topic_sql = "insert into link_question_topic (question_id,topic_id) values (%(q_id)d,%(t_id)d);"
 
@@ -365,7 +365,7 @@ class get_exercises(web.RequestHandler):
             else:
                 html_body = {}
 
-            chapter_info = {}
+            chapter_info = []
 
             sql = 'SELECT chapter_id FROM link_question_chapter WHERE question_id = %s' % question_id
             LOG.info('mysql> %s' % sql)
@@ -374,7 +374,7 @@ class get_exercises(web.RequestHandler):
             if ret:
                 chapter_id = ret[0]['chapter_id']
 
-                sql = 'SELECT id, level, parent_id, replace(prefix_name, "\r\n", "") AS prefix_name, replace(name, "\r\n", "") AS name FROM entity_teaching_chapter WHERE id = %s' % chapter_id
+                sql = 'SELECT id, level, parent_id, REPLACE(prefix_name, "\r\n", "") prefix_name, REPLACE(name, "\r\n", "") name FROM entity_teaching_chapter WHERE id = %s' % chapter_id
                 LOG.info('mysql> %s' % repr(sql)[1:-1])
                 cursor.execute(sql)
                 ret = cursor.fetchall()
@@ -386,10 +386,10 @@ class get_exercises(web.RequestHandler):
                     prefix_name = ret[0]['prefix_name']
                     name        = ret[0]['name']
                     level       = ret[0]['level']
-                    chapter_info[level] = { 'id': chapter_id, 'prefix': prefix_name, 'name': name }
+                    chapter_info.insert(0, { 'id': chapter_id, 'prefix': prefix_name, 'name': name })
 
                     for i in range(int(level) - 1):
-                        sql = 'SELECT id, level, parent_id, replace(prefix_name, "\r\n", "") AS prefix_name, replace(name, "\r\n", "") AS name FROM entity_teaching_chapter WHERE id = %s' % parent_id
+                        sql = 'SELECT id, level, parent_id, REPLACE(prefix_name, "\r\n", "") prefix_name, REPLACE(name, "\r\n", "") name FROM entity_teaching_chapter WHERE id = %s' % parent_id
                         LOG.info('mysql> %s' % repr(sql)[1:-1])
                         cursor.execute(sql)
                         ret = cursor.fetchall()
@@ -400,7 +400,7 @@ class get_exercises(web.RequestHandler):
                         prefix_name = ret[0]['prefix_name']
                         name        = ret[0]['name']
                         level       = ret[0]['level']
-                        chapter_info[level] = { 'id': chapter_id, 'prefix': prefix_name, 'name': name }
+                        chapter_info.insert(0, { 'id': chapter_id, 'prefix': prefix_name, 'name': name })
 
             result          = error_process(0)
             result['json']  = json_body
