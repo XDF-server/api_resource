@@ -221,7 +221,7 @@ class UploadQuestion(web.RequestHandler):
 
 					db = Mysql()
 
-					question_sql = "insert into entity_question (difficulty,question_docx,html,upload_time,question_type,subject_id,new_format,upload_id,upload_src,question_group,grade_id,state,is_single,question_typeid,answer_num,count_ref,paper_year) values (%(level)d,'%(json)s','%(html)s',now(),'%(type)s',%(subject_id)d,1,%(upload_id)d,%(upload_src)d,%(question_group)d,%(grade_id)d,'RAW',1,%(question_typeid)d,%(answer_num)d,0,0);"
+					question_sql = "insert into entity_question (difficulty,question_docx,html,upload_time,question_type,subject_id,new_format,upload_id,upload_src,question_group,grade_id,state,is_single,question_typeid,answer_num,count_ref,paper_year,parent_question_id) values (%(level)d,'%(json)s','%(html)s',now(),'%(type)s',%(subject_id)d,1,%(upload_id)d,%(upload_src)d,%(question_group)d,%(grade_id)d,'RAW',1,%(question_typeid)d,%(answer_num)d,0,0,0);"
 					
 					link_topic_sql = "insert into link_question_topic (question_id,topic_id) values (%(q_id)d,%(t_id)d);"
 
@@ -445,14 +445,12 @@ class update_exercises(web.RequestHandler):
         try:
             if not (type_id.isdigit() and int(type_id) and level_id.isdigit() and int(level_id) and group_id.isdigit() and question_id.isdigit() and int(question_id) and theme + chapter_id and question_json and question_html):
                 return leave_func(self, 1)
+            if chapter_id and not chapter_id.isdigit():
+                return leave_func(self, 1)
 
             if Business.is_level(level_id) is False:
                 LOG.error('invalid level_id[%s]' % level_id)
                 return leave_func(self, 1)
-
-#            if Business.chapter_id_exist(chapter_id) is False:
-#                LOG.error('invalid chapter_id[%d]' % chapter_id)
-#                return leave_func(self, 1)
 
             try:
                 question_json = urllib.unquote(question_json)
@@ -482,7 +480,15 @@ class update_exercises(web.RequestHandler):
             if question_type is False: # 判断题目类型是否存在
                 LOG.error('invalid type_id[%s]' % type_id)
                 return leave_func(self, 1)
-            sql_list.append('UPDATE entity_question SET difficulty = %s, update_time = now(), question_type = "%s", question_group = %s WHERE id = %s' % (level_id, question_type, group_id, question_id)) # 生成更新题目属性的SQL
+
+            answer_num = 0
+            if 'answer' in encode_json['content'].keys():
+                if type_id == '1':
+                    answer_num = len(encode_json['content']['answer'])
+                elif type_id == '2':
+                    answer_num = len([int(answer_group['index']) for answer_group in encode_json['content']['answer']])
+
+            sql_list.append('UPDATE entity_question SET difficulty = %s, update_time = now(), question_type = "%s", question_group = %s, answer_num = %s WHERE id = %s' % (level_id, question_type, group_id, answer_num, question_id)) # 生成更新题目属性的SQL
 
             mysql_handle = Mysql().get_handle()
             mysql_cursor = mysql_handle.cursor(MySQLdb.cursors.DictCursor)
