@@ -467,7 +467,7 @@ class update_exercises(web.RequestHandler):
 
             sql_list = []
             if chapter_id:
-                sql_list.append('UPDATE link_question_chapter SET chapter_id = %s WHERE question_id = %s' % (chapter_id, question_id)) # 生成更新章节关联信息的SQL
+                sql_list.append('INSERT INTO link_question_chapter(question_id, chapter_id) VALUE(%s, %s) ON DUPLICATE KEY UPDATE chapter_id = %s' % (question_id, chapter_id, chapter_id)) # 生成更新章节关联信息的SQL
 
             if theme: # 主题
                 sql_list.append('DELETE FROM link_question_topic WHERE question_id = %s' % question_id) # 生成删除原有主题关联的SQL
