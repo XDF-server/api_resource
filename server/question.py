@@ -126,12 +126,10 @@ class UploadQuestion(web.RequestHandler):
 
 				if type_name == '选择题'.decode('utf-8'):
 					if 'answer' in encode_json.keys():
-						print encode_json['answer']
 				    		answer_num = len(encode_json['answer'])
 
 				if type_name == '填空题'.decode('utf-8'):
 					if 'answer' in encode_json.keys():
-						print encode_json['answer']
 				    		answer_num = max([int(group['index']) for group in encode_json['answer']])
 
 				if not Base.empty(question_chapter):
