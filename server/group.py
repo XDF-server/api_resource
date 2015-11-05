@@ -1,4 +1,4 @@
-# *-* coidng:utf-8 *-*
+# *-* coding:utf-8 *-*
 
 from hashlib import sha1
 import json
@@ -30,7 +30,7 @@ class CreateGroup(web.RequestHandler):
 
                         if Base.check_parameter(set(self.request.arguments.keys()),essential_keys):
                                 ret['code'] = 1
-                                ret['message'] = 'invalid parameter'
+                                ret['message'] = '无效参数'
 				LOG.error('ERROR[in parameter invalid]')
                                 break
 			
@@ -40,7 +40,7 @@ class CreateGroup(web.RequestHandler):
 
 			if Base.empty(group_name):
 				ret['code'] = 1
-				ret['message'] = 'invalid parameter'
+				ret['message'] = '无效参数'
 				LOG.error('ERROR[parameter empty]')
 				break
 
@@ -59,7 +59,7 @@ class CreateGroup(web.RequestHandler):
 
 			if token is None:
 				ret['code'] = 6
-				ret['message'] = 'invalid token'
+				ret['message'] = '无效参数'
 				LOG.error('ERROR[token empty]')
 				break
 
@@ -76,7 +76,7 @@ class CreateGroup(web.RequestHandler):
 
 				if 0 == encode_body['code'] or 2 == encode_body['code']:
 					ret['code'] = 7
-					ret['message'] = 'invalid token'
+					ret['message'] = '无效参数'
 					LOG.error('ERROR[token not exist]')
 					break
 
@@ -88,7 +88,7 @@ class CreateGroup(web.RequestHandler):
 					
 					if Business.group_name_exist(group_name,system_id):
 						ret['code'] = 6
-						ret['message'] = 'key exsit'
+						ret['message'] = '组名已存在'
 						LOG.error('ERROR[group exist]')
 						break
 
@@ -106,20 +106,20 @@ class CreateGroup(web.RequestHandler):
 					
 					except DBException as e:
 						ret['code'] = 3
-						ret['message'] = 'server error'
+						ret['message'] = '服务器错误'
 						LOG.error('ERROR[mysql error]')
 						break
 
 
 				else:
 					ret['code'] = 3 
-					ret['message'] = 'server error'
+					ret['message'] = '服务器错误'
 					LOG.error('ERROR[remote error]')
 					break
 
 			else:
 				ret['code'] = 3 
-				ret['message'] = 'server error'
+				ret['message'] = '服务器错误'
 				LOG.error('ERROR[remote error]')
 				break
 
@@ -152,7 +152,7 @@ class GetGroupList(web.RequestHandler):
 
                         if Base.check_parameter(set(self.request.arguments.keys()),essential_keys):
                                 ret['code'] = 1
-                                ret['message'] = 'invalid parameter'
+                                ret['message'] = '无效参数'
 				LOG.error('ERR[in parameter invalid]') 
                                 break
 			
@@ -161,7 +161,7 @@ class GetGroupList(web.RequestHandler):
 
 			if Base.empty(timestamp):
 				ret['code'] = 1
-				ret['message'] = 'invalid parameter'
+				ret['message'] = '无效参数'
 				LOG.error('ERROR[parameter empty]')
 				break
 
@@ -181,7 +181,7 @@ class GetGroupList(web.RequestHandler):
 
 				if token is None:
 					ret['code'] = 6
-					ret['message'] = 'invalid token'
+					ret['message'] = '无效参数'
 					LOG.error('ERROR[token empty]')
 					break
 
@@ -197,7 +197,7 @@ class GetGroupList(web.RequestHandler):
 
 					if 0 == encode_body['code'] or 2 == encode_body['code']:
 						ret['code'] = 7
-						ret['message'] = 'invalid token'
+						ret['message'] = '无效参数'
 						LOG.error('ERR[token not exist]') 
 						break
 
@@ -215,19 +215,19 @@ class GetGroupList(web.RequestHandler):
 								ret['default_num'] = default_num				
 						except DBException as e:
 							ret['code'] = 3
-							ret['message'] = 'server error'
+							ret['message'] = '服务器错误'
 							LOG.error('ERR[mysql error]') 
 							break
 
 					else:
 						ret['code'] = 3 
-						ret['message'] = 'server error'
+						ret['message'] = '服务器错误'
 						LOG.error('ERROR[remote error]')
 						break
 					
 				else:
 					ret['code'] = 3 
-					ret['message'] = 'server error'
+					ret['message'] = '服务器错误'
 					LOG.error('ERROR[remote error]')
 					break
 
@@ -262,7 +262,7 @@ class UpdateGroup(web.RequestHandler):
 
                         if Base.check_parameter(set(self.request.arguments.keys()),essential_keys):
                                 ret['code'] = 1
-                                ret['message'] = 'invalid parameter'
+                                ret['message'] = '无效参数'
 				LOG.error('ERROR[in parameter invalid]')
                                 break
 
@@ -271,7 +271,7 @@ class UpdateGroup(web.RequestHandler):
 
 			if Base.empty(group_id) or Base.empty(group_name):
 				ret['code'] = 1
-				ret['message'] = 'invalid parameter'
+				ret['message'] = '无效参数'
 				LOG.error('ERROR[parameter empty]')
 				break
 
@@ -287,7 +287,7 @@ class UpdateGroup(web.RequestHandler):
 
 			if token is None:
 				ret['code'] = 6
-				ret['message'] = 'invalid token'
+				ret['message'] = '无效参数'
 				LOG.error('ERROR[token empty]')
 				break
 
@@ -304,7 +304,7 @@ class UpdateGroup(web.RequestHandler):
 
 				if 0 == encode_body['code'] or 2 == encode_body['code']:
 					ret['code'] = 7
-					ret['message'] = 'invalid token'
+					ret['message'] = '无效参数'
 					LOG.error('ERROR[token not exist]')
 					break
 
@@ -316,7 +316,7 @@ class UpdateGroup(web.RequestHandler):
 					
 					if Business.group_name_exist(group_name,system_id):
 						ret['code'] = 6
-						ret['message'] = 'key exsit'
+						ret['message'] = '组名已存在'
 						LOG.error('ERROR[group exist]')
 						break
 
@@ -330,7 +330,7 @@ class UpdateGroup(web.RequestHandler):
 
 						if group_res is False:
 							ret['code'] = 7 
-							ret['message'] = 'key not exist'
+							ret['message'] = '无效参数'
 							LOG.error('ERROR[group not exist]')
 							break	
 
@@ -340,19 +340,19 @@ class UpdateGroup(web.RequestHandler):
 					
 					except DBException as e:
 						ret['code'] = 3
-						ret['message'] = 'server error'
+						ret['message'] = '服务器错误'
 						LOG.error('ERROR[mysql error]')
 						break
 
 				else:
 					ret['code'] = 3 
-					ret['message'] = 'server error'
+					ret['message'] = '服务器错误'
 					LOG.error('ERROR[remote error]')
 					break
 
 			else:
 				ret['code'] = 3 
-				ret['message'] = 'server error'
+				ret['message'] = '服务器错误'
 				LOG.error('ERROR[remote error]')
 				break
 
@@ -382,7 +382,7 @@ class DeleteGroup(web.RequestHandler):
 
                         if Base.check_parameter(set(self.request.arguments.keys()),essential_keys):
                                 ret['code'] = 1
-                                ret['message'] = 'invalid parameter'
+                                ret['message'] = '无效参数'
 				LOG.error('ERROR[in parameter invalid]')
                                 break
 			
@@ -390,7 +390,7 @@ class DeleteGroup(web.RequestHandler):
 
 			if Base.empty(group_id):
 				ret['code'] = 1
-				ret['message'] = 'invalid parameter'
+				ret['message'] = '无效参数'
 				LOG.error('ERROR[parameter empty]')
 				break
 
@@ -406,7 +406,7 @@ class DeleteGroup(web.RequestHandler):
 
 			if token is None:
 				ret['code'] = 6
-				ret['message'] = 'invalid token'
+				ret['message'] = '无效参数'
 				LOG.error('ERROR[token empty]')
 				break
 
@@ -423,7 +423,7 @@ class DeleteGroup(web.RequestHandler):
 
 				if 0 == encode_body['code'] or 2 == encode_body['code']:
 					ret['code'] = 7
-					ret['message'] = 'invalid token'
+					ret['message'] = '无效参数'
 					LOG.error('ERROR[token not exist]')
 					break
 
@@ -445,7 +445,7 @@ class DeleteGroup(web.RequestHandler):
 						group_res = db.exec_event(group_sql,group_id = int(group_id),system_id = int(system_id))
 						if group_res is False:
 							ret['code'] = 7 
-							ret['message'] = 'key not exist'
+							ret['message'] = '无效参数'
 							LOG.error('ERROR[group not exist]')
 							break
 
@@ -461,7 +461,7 @@ class DeleteGroup(web.RequestHandler):
 						db.rollback()
 						db.end_event()
 						ret['code'] = 3
-						ret['message'] = 'server error'
+						ret['message'] = '服务器错误'
 						LOG.error('ERROR[mysql error]')
 						break
 
@@ -469,7 +469,7 @@ class DeleteGroup(web.RequestHandler):
 					db.rollback()
 					db.end(event)
 					ret['code'] = 3 
-					ret['message'] = 'server error'
+					ret['message'] = '服务器错误'
 					LOG.error('ERROR[remote error]')
 					break
 
@@ -477,7 +477,7 @@ class DeleteGroup(web.RequestHandler):
 				db.rollback()
 				db.end(event)
 				ret['code'] = 3 
-				ret['message'] = 'server error'
+				ret['message'] = '服务器错误'
 				LOG.error('ERROR[remote error]')
 				break
 
@@ -509,7 +509,7 @@ class TransferGroup(web.RequestHandler):
 
                         if Base.check_parameter(set(self.request.arguments.keys()),essential_keys):
                                 ret['code'] = 1 
-                                ret['message'] = 'invalid parameter'
+                                ret['message'] = '无效参数'
                                 LOG.error('ERROR[in parameter invalid]')
                                 break
                             
@@ -518,7 +518,7 @@ class TransferGroup(web.RequestHandler):
 
                         if Base.empty(question_id) or Base.empty(group_id):
                                 ret['code'] = 1 
-                                ret['message'] = 'invalid parameter'
+                                ret['message'] = '无效参数'
                                 LOG.error('ERROR[parameter empty]')
                                 break
 
@@ -534,7 +534,7 @@ class TransferGroup(web.RequestHandler):
 
                         if token is None:
                                 ret['code'] = 6 
-                                ret['message'] = 'invalid token'
+                                ret['message'] = '无效参数'
                                 LOG.error('ERROR[token empty]')
                                 break
 
@@ -551,7 +551,7 @@ class TransferGroup(web.RequestHandler):
 
                                 if 0 == encode_body['code'] or 2 == encode_body['code']:
                                         ret['code'] = 7 
-                                        ret['message'] = 'invalid token'
+                                        ret['message'] = '无效参数'
                                         LOG.error('ERROR[token not exist]')
                                         break
 
@@ -572,7 +572,7 @@ class TransferGroup(web.RequestHandler):
 = int(system_id),group_id=int(group_id))                                   
                                                 if not question_res:
 							ret['code'] = 3
-							ret['message'] = 'server error'
+							ret['message'] = '服务器错误'
 							LOG.error('ERROR[mysql error]')
 							break
 	
@@ -582,19 +582,19 @@ class TransferGroup(web.RequestHandler):
                                         except DBException as e:
                                                 db.rollback()
                                                 ret['code'] = 3
-                                                ret['message'] = 'server error'
+                                                ret['message'] = '服务器错误'
                                                 LOG.error('ERROR[mysql error]')
                                                 break
 
                                 else:
                                         ret['code'] = 3
-                                        ret['message'] = 'server error'
+                                        ret['message'] = '服务器错误'
                                         LOG.error('ERROR[remote error]')
                                         break
 
                         else:
                                 ret['code'] = 3
-                                ret['message'] = 'server error'
+                                ret['message'] = '服务器错误'
                                 LOG.error('ERROR[remote error]')
                                 break
 

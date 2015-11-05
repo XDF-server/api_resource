@@ -66,7 +66,7 @@ class UploadQuestion(web.RequestHandler):
 
 			if Base.check_parameter(set(self.request.arguments.keys()),essential_keys):
 				ret['code'] = 1
-				ret['message'] = 'invalid parameters'
+				ret['message'] = '无效参数'
 				LOG.error('ERR[in parameter invalid]') 
 				break
 
@@ -80,7 +80,7 @@ class UploadQuestion(web.RequestHandler):
 
 			if Business.is_level(question_level) is False:
 				ret['code'] = 1
-				ret['message'] = 'invalid parameters'
+				ret['message'] = '无效参数'
 				LOG.error('ERR[level is invalid]') 
 				break
 
@@ -96,13 +96,13 @@ class UploadQuestion(web.RequestHandler):
 				
 				if Base.empty(question_topic) and Base.empty(question_chapter):
 					ret['code'] = 1
-					ret['message'] = 'invalid parameters'
+					ret['message'] = '无效参数'
 					LOG.error('ERR[topic and chapter empty]') 
 					break
 
 				if Base.empty(question_group):
 					ret['code'] = 1
-					ret['message'] = 'invalid parameters'
+					ret['message'] = '无效参数'
 					LOG.error('ERR[group empty]') 
 					break
 
@@ -112,7 +112,7 @@ class UploadQuestion(web.RequestHandler):
 					for question_theme in topic_list:
 						if Business.is_topic(question_theme) is False:
 							ret['code'] = 1
-							ret['message'] = 'invalid parameters'
+							ret['message'] = '无效参数'
 							LOG.error('ERR[topic %s invalid]' % question_theme) 
 							break
 
@@ -120,13 +120,16 @@ class UploadQuestion(web.RequestHandler):
 
 				if type_name is False:
 					ret['code'] = 1
-					ret['message'] = 'invalid parameters'
+					ret['message'] = '无效参数'
 					LOG.error('ERR[type is invalid]') 
 					break
+
+				option_num = 0
 
 				if type_name == '选择题'.decode('utf-8'):
 					if 'answer' in encode_json.keys():
 				    		answer_num = len(encode_json['answer'])
+						option_num = len(encode_json['options'])
 
 				if type_name == '填空题'.decode('utf-8'):
 					if 'answer' in encode_json.keys():
@@ -135,19 +138,19 @@ class UploadQuestion(web.RequestHandler):
 				if not Base.empty(question_chapter):
 					if Business.chapter_id_exist(question_chapter) is False:
 						ret['code'] = 1
-						ret['message'] = 'invalid parameters'
+						ret['message'] = '无效参数'
 						LOG.error('ERR[seriess %s invalid]' % question_theme) 
 						break
 
 			except (ValueError,KeyError,TypeError):
 				ret['code'] = 1
-				ret['message'] = 'invalid parameters'
+				ret['message'] = '无效参数'
 				LOG.error('ERR[json format invalid]') 
 				break
 
 			except CKException: 
 				ret['code'] = 3
-				ret['message'] = 'server error'
+				ret['message'] = '服务器错误'
 				LOG.error('ERR[mysql exception]') 
 				break
 
@@ -159,14 +162,14 @@ class UploadQuestion(web.RequestHandler):
 			json_key = 'tmp_' + secret_key + '.json'
 			if qiniu.upload_data("temp",json_key,question_json) is not None:
 				ret['code'] = 4
-				ret['message'] = 'qiniu error'
+				ret['message'] = '服务器错误'
 				LOG.error('ERR[json upload  qiniu exception]') 
 				break
 			
 			html_key = 'tmp_' + secret_key + '.html'
 			if qiniu.upload_data("temp",html_key,question_html) is not None:
 				ret['code'] = 4
-				ret['message'] = 'qiniu error'
+				ret['message'] = '服务器错误'
 				LOG.error('ERR[html upload  qiniu exception]') 
 				break
 
@@ -183,7 +186,7 @@ class UploadQuestion(web.RequestHandler):
 
 			if token is None:
 				ret['code'] = 6
-				ret['message'] = 'invalid token'
+				ret['message'] = 'token失效'
 				LOG.error('ERROR[token empty]')
 				break
 
@@ -199,7 +202,7 @@ class UploadQuestion(web.RequestHandler):
 
 				if 0 == encode_body['code'] or 2 == encode_body['code']:
 					ret['code'] = 7
-					ret['message'] = 'invalid token'
+					ret['message'] = 'token失效'
 					LOG.error('ERR[token not exist]')
 					break
 
@@ -213,13 +216,13 @@ class UploadQuestion(web.RequestHandler):
 					if 0 != int(question_group):
 						if Business.group_id_exist(question_group,system_id) is False:
 							ret['code'] = 8
-							ret['message'] = 'key not exsit'
+							ret['message'] = '无效参数'
 							LOG.error('ERROR[group not exist]')
 							break	
 
 					db = Mysql()
 
-					question_sql = "insert into entity_question (difficulty,question_docx,html,upload_time,update_time,question_type,subject_id,new_format,upload_id,upload_src,question_group,grade_id,state,is_single,question_typeid,answer_num,count_ref,paper_year,parent_question_id) values (%(level)d,'%(json)s','%(html)s',now(),now(),'%(type)s',%(subject_id)d,1,%(upload_id)d,%(upload_src)d,%(question_group)d,%(grade_id)d,'RAW',1,%(question_typeid)d,%(answer_num)d,0,0,0);"
+					question_sql = "insert into entity_question (difficulty,question_docx,html,upload_time,update_time,question_type,subject_id,new_format,upload_id,upload_src,question_group,grade_id,state,is_single,question_typeid,answer_num,count_ref,paper_year,parent_question_id,count_options) values (%(level)d,'%(json)s','%(html)s',now(),now(),'%(type)s',%(subject_id)d,1,%(upload_id)d,%(upload_src)d,%(question_group)d,%(grade_id)d,'RAW',1,%(question_typeid)d,%(answer_num)d,0,0,0,%(count_options)d);"
 					
 					link_topic_sql = "insert into link_question_topic (question_id,topic_id) values (%(q_id)d,%(t_id)d);"
 
@@ -229,7 +232,7 @@ class UploadQuestion(web.RequestHandler):
 						db.connect_master()
 						db.start_event()
 
-						question_res = db.exec_event(question_sql,level = int(question_level),json = json_key,html = html_key,type = type_name,subject_id = int(subject_id),upload_id = int(system_id),upload_src = int(org_type),question_group = int(question_group),grade_id = int(grade_id),question_typeid = int(question_type),answer_num = answer_num)
+						question_res = db.exec_event(question_sql,level = int(question_level),json = json_key,html = html_key,type = type_name,subject_id = int(subject_id),upload_id = int(system_id),upload_src = int(org_type),question_group = int(question_group),grade_id = int(grade_id),question_typeid = int(question_type),answer_num = answer_num,count_options = option_num)
 						question_sql = db.get_last_sql()
 						question_id = db.get_last_id()
 						LOG.info('RES[%s] - INS[%d]' % (question_res,question_id))
@@ -252,13 +255,13 @@ class UploadQuestion(web.RequestHandler):
 						db.rollback()
 						db.end_event()
 						ret['code'] = 3
-						ret['message'] = 'server error'
+						ret['message'] = '服务器错误'
 						LOG.error('ERR[insert mysql error]') 
 						break
 
 			else:
 				ret['code'] = 3
-				ret['message'] = 'server error'
+				ret['message'] = '服务器错误'
 				LOG.error('ERROR[remote error]')
 				break
 							
@@ -278,7 +281,7 @@ class UploadQuestion(web.RequestHandler):
 				db.rollback()
 				db.end_event()
 				ret['code'] = 3 
-				ret['message'] = 'server error'
+				ret['message'] = '服务器错误'
 				LOG.error('ERR[mongo exception]') 
 				break
 
