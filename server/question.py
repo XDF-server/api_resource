@@ -222,7 +222,7 @@ class UploadQuestion(web.RequestHandler):
 
 					db = Mysql()
 
-					question_sql = "insert into entity_question (difficulty,question_docx,html,upload_time,update_time,question_type,subject_id,new_format,upload_id,upload_src,question_group,grade_id,state,is_single,question_typeid,answer_num,count_ref,paper_year,parent_question_id,count_options) values (%(level)d,'%(json)s','%(html)s',now(),now(),'%(type)s',%(subject_id)d,1,%(upload_id)d,%(upload_src)d,%(question_group)d,%(grade_id)d,'RAW',1,%(question_typeid)d,%(answer_num)d,0,0,0,%(count_options)d);"
+					question_sql = "insert into entity_question (difficulty,question_docx,html,upload_time,update_time,question_type,subject_id,new_format,upload_id,upload_src,question_group,grade_id,state,is_single,question_type_id,answer_num,count_ref,paper_year,parent_question_id,count_options) values (%(level)d,'%(json)s','%(html)s',now(),now(),'%(type)s',%(subject_id)d,1,%(upload_id)d,%(upload_src)d,%(question_group)d,%(grade_id)d,'RAW',1,%(question_type_id)d,%(answer_num)d,0,0,0,%(count_options)d);"
 					
 					link_topic_sql = "insert into link_question_topic (question_id,topic_id) values (%(q_id)d,%(t_id)d);"
 
@@ -232,7 +232,7 @@ class UploadQuestion(web.RequestHandler):
 						db.connect_master()
 						db.start_event()
 
-						question_res = db.exec_event(question_sql,level = int(question_level),json = json_key,html = html_key,type = type_name,subject_id = int(subject_id),upload_id = int(system_id),upload_src = int(org_type),question_group = int(question_group),grade_id = int(grade_id),question_typeid = int(question_type),answer_num = answer_num,count_options = option_num)
+						question_res = db.exec_event(question_sql,level = int(question_level),json = json_key,html = html_key,type = type_name,subject_id = int(subject_id),upload_id = int(system_id),upload_src = int(org_type),question_group = int(question_group),grade_id = int(grade_id),question_type_id = int(question_type),answer_num = answer_num,count_options = option_num)
 						question_sql = db.get_last_sql()
 						question_id = db.get_last_id()
 						LOG.info('RES[%s] - INS[%d]' % (question_res,question_id))
