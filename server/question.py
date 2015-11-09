@@ -222,7 +222,7 @@ class UploadQuestion(web.RequestHandler):
 
 					db = Mysql()
 
-					question_sql = "insert into entity_question (difficulty,question_docx,html,upload_time,update_time,question_type,subject_id,new_format,upload_id,upload_src,question_group,grade_id,state,is_single,question_type_id,answer_num,count_ref,paper_year,parent_question_id,count_options) values (%(level)d,'%(json)s','%(html)s',now(),now(),'%(type)s',%(subject_id)d,1,%(upload_id)d,%(upload_src)d,%(question_group)d,%(grade_id)d,'RAW',1,%(question_type_id)d,%(answer_num)d,0,0,0,%(count_options)d);"
+					question_sql = "insert into entity_question (difficulty,question_docx,html,upload_time,update_time,question_type,subject_id,new_format,upload_id,upload_src,question_group,grade_id,state,is_single,question_type_id,answer_num,count_ref,paper_year,parent_question_id,count_options) values (%(level)d,'%(json)s','%(html)s',now(),now(),'%(type)s',%(subject_id)d,1,%(upload_id)d,%(upload_src)d,%(question_group)d,%(grade_id)d,'ENABLED',1,%(question_type_id)d,%(answer_num)d,0,0,0,%(count_options)d);"
 					
 					link_topic_sql = "insert into link_question_topic (question_id,topic_id) values (%(q_id)d,%(t_id)d);"
 
