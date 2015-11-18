@@ -78,6 +78,7 @@ class UploadQuestion(web.RequestHandler):
 			question_group = ''.join(self.request.arguments['group'])
 			question_chapter = ''.join(self.request.arguments['chapter'])
 
+
 			if Business.is_level(question_level) is False:
 				ret['code'] = 1
 				ret['message'] = '无效参数'
@@ -85,13 +86,14 @@ class UploadQuestion(web.RequestHandler):
 				break
 
 			try:
-				question_json = urllib.unquote(question_json)
-				question_json = question_json.replace("'","\"")
+				#question_json = urllib.unquote(question_json)
+				#question_json = question_json.replace("'","\"")
 				encode_json = json.loads(question_json,encoding = 'utf-8')
-				question_html = urllib.unquote(question_html)
-				question_html = question_html.replace("'","\"")
+				#question_html = urllib.unquote(question_html)
+				#question_html = question_html.replace("'","\"")
 				encode_html = json.loads(question_html,encoding = 'utf-8')
 
+				LOG.info('Json Loads Successful')
 				answer_num = 0
 				
 				if Base.empty(question_topic) and Base.empty(question_chapter):
@@ -126,14 +128,18 @@ class UploadQuestion(web.RequestHandler):
 
 				option_num = 0
 
+				LOG.info('Json Parse Start')
+
 				if type_name == '选择题'.decode('utf-8'):
 					if 'answer' in encode_json.keys():
-				    		answer_num = len(encode_json['answer'])
+						answer_num = len(encode_json['answer'])
 						option_num = len(encode_json['options'])
 
 				if type_name == '填空题'.decode('utf-8'):
 					if 'answer' in encode_json.keys():
-				    		answer_num = max([int(group['index']) for group in encode_json['answer']])
+							answer_num = max([int(group['index']) for group in encode_json['answer']])
+				
+				LOG.info('Json Parse End')
 
 				if not Base.empty(question_chapter):
 					if Business.chapter_id_exist(question_chapter) is False:
@@ -141,7 +147,6 @@ class UploadQuestion(web.RequestHandler):
 						ret['message'] = '无效参数'
 						LOG.error('ERR[seriess %s invalid]' % question_theme) 
 						break
-
 			except (ValueError,KeyError,TypeError):
 				ret['code'] = 1
 				ret['message'] = '无效参数'
@@ -454,10 +459,10 @@ class update_exercises(web.RequestHandler):
                 return leave_func(self, 1)
 
             try:
-                question_json = urllib.unquote(question_json)
+                #question_json = urllib.unquote(question_json)
                 encode_json = {}
                 encode_json['content'] = json.loads(question_json, encoding = 'utf-8')
-                question_html = urllib.unquote(question_html)
+                #question_html = urllib.unquote(question_html)
                 encode_html = {}
                 encode_html['content'] = json.loads(question_html, encoding = 'utf-8')
             except:
