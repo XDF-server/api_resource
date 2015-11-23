@@ -15,6 +15,7 @@ from mysql import Mysql
 from mongo import Mongo
 from hashlib import sha1
 from business import Business
+from pptx import Presentation
 from base import Base, Configer
 from qiniu_wrap import QiniuWrap
 from tornado import web, httpclient, gen
@@ -717,3 +718,16 @@ class get_doc_info(web.RequestHandler):
         leave_func(self, 0)
         return self.write(ret)
 
+class check_ppt(web.RequestHandler):
+    def get(self):
+        enter_func(self)
+        if not set(['url']).issubset(self.request.arguments.keys()):
+            return leave_func(self, 1)
+        url = self.request.arguments['url'][0]
+        try:
+            Presentation(urllib.urlretrieve(url)[0])
+            leave_func(self, 0)
+            return self.write(error_process(0))
+        except Exception, e:
+            LOG.error('%s invalid' % url)
+            return leave_func(self, 2)

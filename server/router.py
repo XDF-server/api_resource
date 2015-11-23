@@ -44,6 +44,7 @@ if __name__ == "__main__":
 		(r'/api/uptoken',UpToken),
 		(r'/api/transcode',Transcode),
 		(r'/api/transcode_res',TranscodeRes),
+		(r'/api/check_ppt', check_ppt),
 	])
 
 	http_server = tornado.httpserver.HTTPServer(application)
