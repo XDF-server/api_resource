@@ -92,9 +92,9 @@ class QiniuWrap(object):
 		ret,info = put_data(token,key,data)
 
 		if 200 == info.status_code:
-			return None
+			return True
 		else:
-			return info.text_body[10:-2]
+			return False
 
 
         def get_file_info(self,bucket_name,key):

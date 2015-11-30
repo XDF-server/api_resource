@@ -9,6 +9,7 @@ import hashlib
 import urllib2
 import traceback
 
+from doit import Doit
 from gl import LOG
 from http import Http
 from mysql import Mysql
@@ -63,7 +64,7 @@ class UploadQuestion(web.RequestHandler):
 			
 			ret = {'code':'','message':''}
 
-			essential_keys = set(['json','html','topic','level','type','group','chapter'])
+			essential_keys = set(['json','html','topic','level','type','group','chapter','ref'])
 
 			if Base.check_parameter(set(self.request.arguments.keys()),essential_keys):
 				ret['code'] = 1
@@ -78,6 +79,7 @@ class UploadQuestion(web.RequestHandler):
 			question_type = ''.join(self.request.arguments['type'])
 			question_group = ''.join(self.request.arguments['group'])
 			question_chapter = ''.join(self.request.arguments['chapter'])
+			ref = ''.join(self.request.arguments['ref'])
 
 
 			if Business.is_level(question_level) is False:
@@ -166,14 +168,14 @@ class UploadQuestion(web.RequestHandler):
 			qiniu = QiniuWrap()
 
 			json_key = 'tmp_' + secret_key + '.json'
-			if qiniu.upload_data("temp",json_key,question_json) is not None:
+			if not qiniu.upload_data("temp",json_key,question_json):
 				ret['code'] = 4
 				ret['message'] = '服务器错误'
 				LOG.error('ERR[json upload  qiniu exception]') 
 				break
 			
 			html_key = 'tmp_' + secret_key + '.html'
-			if qiniu.upload_data("temp",html_key,question_html) is not None:
+			if not qiniu.upload_data("temp",html_key,question_html):
 				ret['code'] = 4
 				ret['message'] = '服务器错误'
 				LOG.error('ERR[html upload  qiniu exception]') 
@@ -277,11 +279,11 @@ class UploadQuestion(web.RequestHandler):
 				mongo.connect('resource')
 				mongo.select_collection('mongo_question_json')
 				json_id = mongo.insert_one({"content":encode_json,"question_id":question_id})
-				LOG.info('MONGO[insert json] - DATA[%s] - INS[%s]' % (json.dumps(encode_json),json_id))
+				LOG.info('MONGO[insert json] - DATA[%s] - INS[%s] - Question Id[%d]' % (json.dumps(encode_json),json_id,question_id))
 
 				mongo.select_collection('mongo_question_html')
 				html_id = mongo.insert_one({"content":encode_html,"question_id":question_id})
-				LOG.info('MONGO[insert html] - DATA[%s] - INS[%s]' % (json.dumps(encode_html),html_id))
+				LOG.info('MONGO[insert html] - DATA[%s] - INS[%s] - Question Id[%d]' % (json.dumps(encode_html),html_id,question_id))
 
 			except DBException as e:
 				db.rollback()
@@ -292,6 +294,11 @@ class UploadQuestion(web.RequestHandler):
 				break
 
 			db.end_event()
+
+			if int(ref):
+				doit = Doit()
+				doit.local_img(str(question_id))
+				LOG.info('Local Img [%s]' % str(question_id))
 
 			ret['code'] = 0
 			ret['message'] = 'success'
@@ -718,6 +725,7 @@ class get_doc_info(web.RequestHandler):
         leave_func(self, 0)
         return self.write(ret)
 
+
 class check_ppt(web.RequestHandler):
     def get(self):
         enter_func(self)
@@ -731,3 +739,4 @@ class check_ppt(web.RequestHandler):
         except Exception, e:
             LOG.error('%s invalid' % url)
             return leave_func(self, 2)
+
