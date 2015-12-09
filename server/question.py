@@ -753,8 +753,10 @@ curl 'http://owa.okjiaoyu.cn/p/ppt/view.svc/jsonAnonymous/GetPresentation'\
  -H 'X-xhr: 1'\
  --data-binary '{"presentationId":"WOPIsrc=http%3A%2F%2Fowa%2Eokjiaoyu%2Ecn%2Foh%2Fwopi%2Ffiles%2F%40%2FwFileId%3FwFileId%3D""" + url + """&access_token=1&access_token_ttl=0&z=990754cd942b9109d25fa50b9e29235bc35783e1a4b4ab3dde8b3b3f41edbe22","powerpointView":0,"format":0}'\
  --compressed"""
-        LOG.info(cmd)
-        if '很抱歉，因为遇到问题，无法打开此演示文稿。' in os.popen(cmd).read():
+        LOG.debug(cmd)
+        ret = os.popen(cmd).read()
+        LOG.debug(ret)
+        if json.loads(ret)['Error']:
             return leave_func(self, 2)
         leave_func(self, 0)
         return self.write(error_process(0))
