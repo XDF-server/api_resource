@@ -733,7 +733,8 @@ class check_ppt(web.RequestHandler):
             return leave_func(self, 1)
         LOG.info(self.request.arguments['url'][0])
         url = urllib.quote(urllib.quote(self.request.arguments['url'][0]))
-        cmd = """\
+        cmds = []
+        cmds.append("""\
 curl 'http://owa.okjiaoyu.cn/p/ppt/view.svc/jsonAnonymous/GetPresentation'\
  -H 'Cookie: WACAirSpaceAnimationOff=; DcLcid=ui=2052&data=2052'\
  -H 'Origin: http://owa.okjiaoyu.cn'\
@@ -752,11 +753,53 @@ curl 'http://owa.okjiaoyu.cn/p/ppt/view.svc/jsonAnonymous/GetPresentation'\
  -H 'X-UserType: WOPI'\
  -H 'X-xhr: 1'\
  --data-binary '{"presentationId":"WOPIsrc=http%3A%2F%2Fowa%2Eokjiaoyu%2Ecn%2Foh%2Fwopi%2Ffiles%2F%40%2FwFileId%3FwFileId%3D""" + url + """&access_token=1&access_token_ttl=0&z=990754cd942b9109d25fa50b9e29235bc35783e1a4b4ab3dde8b3b3f41edbe22","powerpointView":0,"format":0}'\
- --compressed"""
-        LOG.debug(cmd)
-        ret = os.popen(cmd).read()
-        LOG.debug(ret)
-        if json.loads(ret)['Error']:
-            return leave_func(self, 2)
+ --compressed""")
+        cmds.append("""\
+curl 'http://owa.okjiaoyu.cn/p/ppt/view.svc/jsonAnonymous/GetPresentation'\
+ -H 'Cookie: WACAirSpaceAnimationOff=; DcLcid=ui=2052&data=2052'\
+ -H 'Origin: http://owa.okjiaoyu.cn'\
+ -H 'Accept-Encoding: gzip, deflate'\
+ -H 'Accept-Language: zh-CN,zh;q=0.8,en;q=0.6'\
+ -H 'X-OfficeVersion: 15.0.4571.1502'\
+ -H 'X-Key: C3BfMKTirt0nh89c0MAbZlQqRBR0Lr4bWVS1GDJE+3w=,635850928972727814'\
+ -H 'X-Requested-With: XMLHttpRequest'\
+ -H 'Connection: keep-alive'\
+ -H 'X-AccessToken: 1'\
+ -H 'X-UserSessionId: 250bda0e-ce8c-4f93-aef5-2de4c7f21cba'\
+ -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.80 Safari/537.36'\
+ -H 'Content-Type: application/json; charset=UTF-8'\
+ -H 'Accept: */*'\
+ -H 'Referer: http://owa.okjiaoyu.cn/p/PowerPointFrame.aspx?PowerPointView=ChromelessView&Embed=1&ui=zh%2DCN&rs=zh%2DCN&WOPISrc=http%3A%2F%2Fowa%2Eokjiaoyu%2Ecn%2Foh%2Fwopi%2Ffiles%2F%40%2FwFileId%3FwFileId%3D""" + url + """&access_token=1&access_token_ttl=0'\
+ -H 'X-UserType: WOPI'\
+ -H 'X-xhr: 1'\
+ --data-binary '{"presentationId":"WOPIsrc=http%3A%2F%2Fowa%2Eokjiaoyu%2Ecn%2Foh%2Fwopi%2Ffiles%2F%40%2FwFileId%3FwFileId%3D""" + url + """&access_token=1&access_token_ttl=0&z=990754cd942b9109d25fa50b9e29235bc35783e1a4b4ab3dde8b3b3f41edbe22","powerpointView":6,"format":2}'\
+ --compressed""")
+        cmds.append("""\
+curl 'http://owa.okjiaoyu.cn/p/ppt/view.svc/jsonAnonymous/GetPresentation'\
+ -H 'Cookie: WACAirSpaceAnimationOff=; DcLcid=ui=2052&data=2052'\
+ -H 'Origin: http://owa.okjiaoyu.cn'\
+ -H 'Accept-Encoding: gzip, deflate'\
+ -H 'Accept-Language: zh-CN,zh;q=0.8,en;q=0.6'\
+ -H 'X-OfficeVersion: 15.0.4571.1502'\
+ -H 'X-Key: C3BfMKTirt0nh89c0MAbZlQqRBR0Lr4bWVS1GDJE+3w=,635850928972727814'\
+ -H 'X-Requested-With: XMLHttpRequest'\
+ -H 'Connection: keep-alive'\
+ -H 'X-AccessToken: 1'\
+ -H 'X-UserSessionId: 250bda0e-ce8c-4f93-aef5-2de4c7f21cba'\
+ -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.80 Safari/537.36'\
+ -H 'Content-Type: application/json; charset=UTF-8'\
+ -H 'Accept: */*'\
+ -H 'Referer: http://owa.okjiaoyu.cn/p/PowerPointFrame.aspx?PowerPointView=SlideShowView&ui=zh%2DCN&rs=zh%2DCN&WOPISrc=http%3A%2F%2Fowa%2Eokjiaoyu%2Ecn%2Foh%2Fwopi%2Ffiles%2F%40%2FwFileId%3FwFileId%3D""" + url + """&access_token=1&access_token_ttl=0'\
+ -H 'X-UserType: WOPI'\
+ -H 'X-xhr: 1'\
+ --data-binary '{"presentationId":"WOPIsrc=http%3A%2F%2Fowa%2Eokjiaoyu%2Ecn%2Foh%2Fwopi%2Ffiles%2F%40%2FwFileId%3FwFileId%3D""" + url + """&access_token=1&access_token_ttl=0&z=990754cd942b9109d25fa50b9e29235bc35783e1a4b4ab3dde8b3b3f41edbe22","powerpointView":1,"format":0}'\
+ --compressed""")
+        for cmd in cmds:
+            LOG.debug(cmd)
+            ret = os.popen(cmd).read()
+            LOG.debug(ret)
+            if json.loads(ret)['Error']:
+                return leave_func(self, 2)
         leave_func(self, 0)
         return self.write(error_process(0))
+
