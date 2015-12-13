@@ -1,13 +1,15 @@
 # *-*coding:utf8*-*
-import os
 import json
 import time
 import redis
+import shlex
 import urllib
 import MySQLdb
 import hashlib
 import urllib2
 import traceback
+import subprocess
+import tornado.ioloop
 
 from doit import Doit
 from gl import LOG
@@ -16,7 +18,6 @@ from mysql import Mysql
 from mongo import Mongo
 from hashlib import sha1
 from business import Business
-#from pptx import Presentation
 from base import Base, Configer
 from qiniu_wrap import QiniuWrap
 from tornado import web, httpclient, gen
@@ -586,6 +587,11 @@ def leave_func(self, code):
         self.write(error_process(code))
 
 
+def _leave_func(self, code, msg):
+    LOG.debug('%s(%s) %s ...' % (self.__class__.__name__, json.dumps(self.request.arguments, ensure_ascii=False), error_process(code)))
+    self.finish(dict(error_process(code).items() + msg.items()))
+
+
 class search_keyword(web.RequestHandler):
     def get(self):
         enter_func(self)
@@ -727,11 +733,13 @@ class get_doc_info(web.RequestHandler):
 
 
 class check_ppt(web.RequestHandler):
+    @web.asynchronous
+    @gen.engine
     def get(self):
         enter_func(self)
         if not set(['url']).issubset(self.request.arguments.keys()):
-            return leave_func(self, 1)
-        LOG.info(self.request.arguments['url'][0])
+            _leave_func(self, 1, {})
+            return
         url = urllib.quote(urllib.quote(self.request.arguments['url'][0]))
         cmds = []
         cmds.append("""\
@@ -795,11 +803,29 @@ curl 'http://owa.okjiaoyu.cn/p/ppt/view.svc/jsonAnonymous/GetPresentation'\
  --data-binary '{"presentationId":"WOPIsrc=http%3A%2F%2Fowa%2Eokjiaoyu%2Ecn%2Foh%2Fwopi%2Ffiles%2F%40%2FwFileId%3FwFileId%3D""" + url + """&access_token=1&access_token_ttl=0&z=990754cd942b9109d25fa50b9e29235bc35783e1a4b4ab3dde8b3b3f41edbe22","powerpointView":1,"format":0}'\
  --compressed""")
         for cmd in cmds:
-            LOG.debug(cmd)
-            ret = os.popen(cmd).read()
-            LOG.debug(ret)
-            if json.loads(ret)['Error']:
-                return leave_func(self, 2)
-        leave_func(self, 0)
-        return self.write(error_process(0))
+            LOG.info(cmd)
+            stdoutput = yield gen.Task(self.subprocess, cmd)
+            LOG.debug(stdoutput)
+            if json.loads(stdoutput)['Error']:
+                _leave_func(self, 2, {})
+                return
+        _leave_func(self, 0, {})
+
+    def subprocess(self, cmd, callback):
+        ioloop = tornado.ioloop.IOLoop.instance()
+        args = shlex.split(cmd)
+        LOG.debug(args)
+        pipe = subprocess.Popen(args, stdout = subprocess.PIPE, close_fds = True)
+        fd = pipe.stdout.fileno()
+        result = []
+
+        def recv(*args):
+            data = pipe.stdout.readline()
+            if data:
+                result.append(data)
+            elif pipe.poll() is not None:
+                ioloop.remove_handler(fd)
+                callback(''.join(result))
+    
+        ioloop.add_handler(fd, recv, ioloop.READ)
 
